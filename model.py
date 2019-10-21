@@ -116,7 +116,7 @@ class DeepLabV3Plus(nn.Module):
     def __init__(self,
                  num_classes,
                  filters=[64, 128, 256, 512, 1024],
-                 res_n=[1, 2, 8, 8, 4]):
+                 res_n=[1, 1, 4, 4, 2]):
         super(DeepLabV3Plus, self).__init__()
         assert (len(filters) == 5 and len(res_n) == 5)
         self.conv1 = nn.Conv2d(3, 32, 7, padding=3, bias=False)
