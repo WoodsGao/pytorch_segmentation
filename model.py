@@ -24,13 +24,18 @@ class SELayer(nn.Module):
         return x * weight
 
 
+class EmptyLayer(nn.Module):
+    def forward(self, x):
+        return x
+
+
 class ResBlock(nn.Module):
-    def __init__(self, in_features, out_features, stride=1, dilation=1):
+    def __init__(self, in_features, out_features, stride=1, dilation=1, se_block=False):
         super(ResBlock, self).__init__()
         self.block = nn.Sequential(
             bn(in_features),
             relu,
-            # SELayer(in_features),
+            SELayer(in_features) if se_block else EmptyLayer(), 
             nn.Conv2d(in_features, out_features // 2, 1, 1, 0, bias=False),
             bn(out_features // 2),
             relu,
@@ -40,7 +45,7 @@ class ResBlock(nn.Module):
                       stride,
                       dilation,
                       bias=False,
-                    #   groups=32 if out_features % 32 == 0 else 1,
+                      groups=32 if out_features % 32 == 0 else 1,
                       dilation=dilation),
             # SELayer(out_features),
         )
