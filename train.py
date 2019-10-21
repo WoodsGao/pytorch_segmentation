@@ -83,7 +83,7 @@ def train(data_dir,
             loss = loss.view(loss.size(0), -1).mean(1)
             against_examples.append(
                 [inputs[loss > loss.mean()], targets[loss > loss.mean()]])
-            loss.sum().backward()
+            loss.mean().backward()
             total_loss += loss.mean().item()
             pbar.set_description('train loss: %lf' % (total_loss /
                                                       (batch_idx)))
@@ -99,7 +99,7 @@ def train(data_dir,
                     against_targets = example[1]
                     outputs = model(against_inputs)[0].sigmoid()
                     loss = criterion(outputs, against_targets)
-                    loss.sum().backward()
+                    loss.mean().backward()
                 optimizer.step()
                 optimizer.zero_grad()
                 against_examples = []
