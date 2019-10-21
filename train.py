@@ -74,35 +74,36 @@ def train(data_dir,
         total_loss = 0
         pbar = tqdm(range(1, train_loader.iter_times + 1))
         optimizer.zero_grad()
-        # for batch_idx in pbar:
-        #     inputs, targets = train_loader.next()
-        #     inputs = torch.FloatTensor(inputs).to(device)
-        #     targets = torch.FloatTensor(targets).to(device)
-        #     outputs = model(inputs)[0].sigmoid()
-        #     loss = criterion(outputs, targets)
-        #     loss = loss.view(loss.size(0), -1).mean(1)
-        #     against_examples.append(
-        #         [inputs[loss > loss.mean()], targets[loss > loss.mean()]])
-        #     loss.sum().backward()
-        #     total_loss += loss.mean().item()
-        #     pbar.set_description('train loss: %lf' % (total_loss /
-        #                                               (batch_idx)))
-        #     if batch_idx % accumulate == 0 or \
-        #             batch_idx == train_loader.iter_times:
-        #         optimizer.step()
-        #         optimizer.zero_grad()
-        #         # against examples training
-        #         for example in against_examples:
-        #             against_inputs = example[0]
-        #             if against_inputs.size(0) < 2:
-        #                 continue
-        #             against_targets = example[1]
-        #             outputs = model(against_inputs)[0].sigmoid()
-        #             loss = criterion(outputs, against_targets)
-        #             loss.sum().backward()
-        #         optimizer.step()
-        #         optimizer.zero_grad()
-        #         against_examples = []
+        for batch_idx in pbar:
+            inputs, targets = train_loader.next()
+            inputs = torch.FloatTensor(inputs).to(device)
+            targets = torch.FloatTensor(targets).to(device)
+            outputs = model(inputs)[0].sigmoid()
+            loss = criterion(outputs, targets)
+            loss = loss.view(loss.size(0), -1).mean(1)
+            against_examples.append(
+                [inputs[loss > loss.mean()], targets[loss > loss.mean()]])
+            loss.sum().backward()
+            total_loss += loss.mean().item()
+            pbar.set_description('train loss: %lf' % (total_loss /
+                                                      (batch_idx)))
+            if batch_idx % accumulate == 0 or \
+                    batch_idx == train_loader.iter_times:
+                optimizer.step()
+                optimizer.zero_grad()
+                # against examples training
+                for example in against_examples:
+                    against_inputs = example[0]
+                    if against_inputs.size(0) < 2:
+                        continue
+                    against_targets = example[1]
+                    outputs = model(against_inputs)[0].sigmoid()
+                    loss = criterion(outputs, against_targets)
+                    loss.sum().backward()
+                optimizer.step()
+                optimizer.zero_grad()
+                against_examples = []
+        print('')
         # validate
         val_loss, miou = test(model, val_loader, criterion)
         # Save checkpoint.

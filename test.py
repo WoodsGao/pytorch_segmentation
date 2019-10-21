@@ -12,8 +12,6 @@ import argparse
 def test(model, val_loader, criterion):
     model.eval()
     val_loss = 0
-    correct = 0
-    total = 0
     num_classes = len(val_loader.classes)
     total_c = torch.zeros(num_classes)
     # true positive / intersection
@@ -50,7 +48,7 @@ def test(model, val_loader, criterion):
 
             pbar.set_description('loss: %10lf, miou: %10lf' %
                                  (val_loss / batch_idx, (tp / union).mean()))
-
+    print('')
     for c_i, c in enumerate(val_loader.classes):
         print('cls: %30s, targets: %10d, pre: %10lf, rec: %10lf, iou: %10lf' %
               (c, total_c[c_i], tp[c_i] / (tp[c_i] + fp[c_i]), tp[c_i] /
