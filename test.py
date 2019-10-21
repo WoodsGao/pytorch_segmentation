@@ -26,7 +26,7 @@ def test(model, val_loader, criterion):
             inputs, targets = val_loader.next()
             inputs = torch.FloatTensor(inputs).to(device)
             targets = torch.FloatTensor(targets).to(device)
-            outputs = model(inputs)[0].sigmoid()
+            outputs = model(inputs).sigmoid()
             loss = criterion(outputs, targets)
             loss = loss.view(loss.size(0), -1).mean(1)
             val_loss += loss.mean().item()
@@ -61,10 +61,10 @@ def test(model, val_loader, criterion):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', type=str, required=True)
+    parser.add_argument('--data_dir', type=str, default='data/voc')
     parser.add_argument('--img_size', type=int, default=224)
     parser.add_argument('--batch_size', type=int, default=32)
-    parser.add_argument('--weight_path', type=str, required=True)
+    parser.add_argument('--weight_path', type=str, default='weights/last.pt')
     opt = parser.parse_args()
 
     criterion = FocalBCELoss(alpha=0.25, gamma=2)

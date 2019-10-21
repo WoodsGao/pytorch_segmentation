@@ -29,6 +29,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-p',
                         '--path',
-                        default='/home/uisee/Datasets/VOC2012_seg')
+                        default='data/voc')
     args = parser.parse_args()
     find_segment_classes(args.path)
