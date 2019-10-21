@@ -10,7 +10,6 @@ from tqdm import tqdm
 from test import test
 from torchsummary import summary
 import argparse
-from core.models.deeplabv3_plus import DeepLabV3Plus
 
 print(device)
 
