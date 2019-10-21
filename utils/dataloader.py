@@ -16,13 +16,15 @@ class Dataloader(dataloader.Dataloader):
         label_dir = os.path.join(data_dir, 'labels')
         with open(self.path, 'r') as f:
             names = [n for n in f.read().split('\n') if n]
-        # names = [
-        #     name for name in names if os.path.splitext(name)[1] in IMG_EXT
-        # ]
+        names = [
+            name for name in names
+            if os.path.splitext(name)[1] in config.IMG_EXT
+        ]
         for name in names:
             self.data_list.append([
-                os.path.join(image_dir, name + '.jpg'),
-                os.path.join(label_dir, name + '.png')
+                os.path.join(image_dir, name),
+                os.path.join(label_dir,
+                             os.path.splitext(name)[0] + '.png')
             ])
 
     def worker(self, message):
