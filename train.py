@@ -1,5 +1,5 @@
 import torch
-# from model import DeepLabV3Plus
+from model import DeepLabV3Plus
 import os
 from utils import device
 from utils.dataloader import Dataloader
