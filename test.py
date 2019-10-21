@@ -16,10 +16,12 @@ def test(model, val_loader, criterion):
     total = 0
     num_classes = len(val_loader.classes)
     total_c = torch.zeros(num_classes)
+    # true positive / intersection
     tp = torch.zeros(num_classes)
     fp = torch.zeros(num_classes)
     tn = torch.zeros(num_classes)
     fn = torch.zeros(num_classes)
+    union = torch.zeros(num_classes)
     with torch.no_grad():
         pbar = tqdm(range(1, val_loader.iter_times + 1))
         for batch_idx in pbar:
@@ -29,34 +31,32 @@ def test(model, val_loader, criterion):
             outputs = model(inputs).sigmoid()
             loss = criterion(outputs, targets)
             loss = loss.view(loss.size(0), -1).mean(1)
-            val_loss += loss.mean().item()
+            val_loss += loss.mean()
             predicted = outputs.max(1)[1].view(-1)
             targets = targets.max(1)[1].view(-1)
             eq = predicted.eq(targets)
-            total += targets.size(0)
-            correct += eq.sum().item()
-            acc = 100. * correct / total
 
             for c_i, c in enumerate(val_loader.classes):
-                indices = targets.eq(c_i).nonzero()
-                total_c[c_i] += targets.eq(c_i).sum().item()
-                tp[c_i] += eq[indices].sum().item()
-                fn[c_i] += targets.eq(c_i).sum().item() - \
-                    eq[indices].sum().item()
-                indices = predicted.eq(c_i).nonzero()
-                tn[c_i] += eq[indices].sum().item()
-                fp[c_i] += predicted.eq(c_i).sum().item() - \
-                    eq[indices].sum().item()
+                indices = targets.eq(c_i)
+                total_c[c_i] += indices.sum()
+                tp[c_i] += eq[indices].sum()
+                fn[c_i] += indices.sum() - \
+                    eq[indices].sum()
+                indices = predicted.eq(c_i)
+                tn[c_i] += eq[indices].sum()
+                fp[c_i] += predicted.eq(c_i).sum() - \
+                    eq[indices].sum()
+                union[c_i] += ((targets.eq(c_i) + predicted.eq(c_i)) > 0).sum()
 
-            pbar.set_description('loss: %10lf, acc: %10lf' %
-                                 (val_loss / batch_idx, acc))
+            pbar.set_description('loss: %10lf, miou: %10lf' %
+                                 (val_loss / batch_idx, (tp / union).mean()))
 
     for c_i, c in enumerate(val_loader.classes):
-        print('cls: %10s, targets: %10d, pre: %10lf, rec: %10lf' %
+        print('cls: %30s, targets: %10d, pre: %10lf, rec: %10lf, iou: %10lf' %
               (c, total_c[c_i], tp[c_i] / (tp[c_i] + fp[c_i]), tp[c_i] /
-               (tp[c_i] + fn[c_i])))
+               (tp[c_i] + fn[c_i]), tp[c_i] / union[c_i]))
     val_loss /= val_loader.iter_times
-    return val_loss, acc
+    return val_loss, (tp / union).mean()
 
 
 if __name__ == "__main__":
