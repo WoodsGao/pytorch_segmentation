@@ -57,10 +57,7 @@ def train(data_dir,
     model = DeepLabV3Plus(num_classes)
     # model = UNet(num_classes)
     model = model.to(device)
-    weight = torch.ones(22)
-    weight[0] = 1. / 50.
-    weight = weight.to(device)
-    criterion = FocalBCELoss(alpha=0.05, gamma=10, weight=weight)
+    criterion = FocalBCELoss(alpha=0.05, gamma=10)
     optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
     # summary(model, (3, img_size, img_size))
     if resume:
