@@ -1,0 +1,3 @@
+[submodule "utils/cv_utils"]
+	path = utils/cv_utils
+	url = https://github.com/woodsgao/cv_utils.git
