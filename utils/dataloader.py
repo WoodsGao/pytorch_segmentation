@@ -27,14 +27,14 @@ class Dataloader(dataloader.Dataloader):
                              os.path.splitext(name)[0] + '.png')
             ])
 
-    def worker(self, message):
+    def worker(self, message, scale):
         img = cv2.imread(message[0])
-        img = cv2.resize(img, (self.img_size, self.img_size))
+        img = cv2.resize(img, (scale, scale))
         seg_rgb = cv2.imread(message[1])
         seg = np.zeros([seg_rgb.shape[0], seg_rgb.shape[1], len(self.classes)])
         for ci, c in enumerate(self.classes):
             seg[(seg_rgb == c[1]).all(2), ci] = 1
-        seg = cv2.resize(seg, (self.img_size, self.img_size))
+        seg = cv2.resize(seg, (scale, scale))
         for aug in self.augments:
             img, _, seg = aug(img, seg=seg)
         seg[seg > 0.5] = 1
