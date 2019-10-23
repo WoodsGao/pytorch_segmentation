@@ -13,11 +13,10 @@ def test(model, val_loader, criterion):
     model.eval()
     val_loss = 0
     num_classes = len(val_loader.classes)
-    total_c = torch.zeros(num_classes)
+    total_size = 0
     # true positive / intersection
     tp = torch.zeros(num_classes)
     fp = torch.zeros(num_classes)
-    tn = torch.zeros(num_classes)
     fn = torch.zeros(num_classes)
     union = torch.zeros(num_classes)
     with torch.no_grad():
@@ -26,32 +25,31 @@ def test(model, val_loader, criterion):
             inputs, targets = val_loader.next()
             inputs = torch.FloatTensor(inputs).to(device)
             targets = torch.FloatTensor(targets).to(device)
-            outputs = model(inputs).sigmoid()
+            outputs = model(inputs)
             loss = criterion(outputs, targets)
             loss = loss.view(loss.size(0), -1).mean(1)
             val_loss += loss.mean()
             predicted = outputs.max(1)[1].view(-1)
             targets = targets.max(1)[1].view(-1)
             eq = predicted.eq(targets)
-
+            total_size += predicted.size(0)
             for c_i, c in enumerate(val_loader.classes):
                 indices = targets.eq(c_i)
-                total_c[c_i] += indices.sum()
-                tp[c_i] += eq[indices].sum()
-                fn[c_i] += indices.sum() - \
-                    eq[indices].sum()
-                indices = predicted.eq(c_i)
-                tn[c_i] += eq[indices].sum()
-                fp[c_i] += predicted.eq(c_i).sum() - \
-                    eq[indices].sum()
+                positive = indices.sum().item()
+                tpi = eq[indices].sum().item()
+                fni = positive - tpi
+                fpi = predicted.eq(c_i).sum().item() - tpi
+                tp[c_i] += tpi
+                fn[c_i] += fni
+                fp[c_i] += fpi
                 union[c_i] += ((targets.eq(c_i) + predicted.eq(c_i)) > 0).sum()
 
             pbar.set_description('loss: %10lf, miou: %10lf' %
                                  (val_loss / batch_idx, (tp / union).mean()))
     print('')
     for c_i, c in enumerate(val_loader.classes):
-        print('cls: %30s, targets: %10d, pre: %10lf, rec: %10lf, iou: %10lf' %
-              (c, total_c[c_i], tp[c_i] / (tp[c_i] + fp[c_i]), tp[c_i] /
+        print('cls: %10s, targets: %10d, pre: %10lf, rec: %10lf, iou: %10lf' %
+              (c[0], tp[c_i] + fn[c_i], tp[c_i] / (tp[c_i] + fp[c_i]), tp[c_i] /
                (tp[c_i] + fn[c_i]), tp[c_i] / union[c_i]))
     val_loss /= val_loader.iter_times
     return val_loss, (tp / union).mean()

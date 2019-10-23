@@ -1,5 +1,5 @@
 import torch
-from model import DeepLabV3Plus
+from model import DeepLabV3Plus, UNet
 import os
 from utils import device
 from utils.dataloader import Dataloader
@@ -23,7 +23,7 @@ def train(data_dir,
           resume=False,
           resume_path='',
           augments_list=[], 
-          multi_scale=True):
+          multi_scale=False):
     if not os.path.exists('weights'):
         os.mkdir('weights')
 
@@ -55,8 +55,12 @@ def train(data_dir,
     epoch = 0
     num_classes = len(train_loader.classes)
     model = DeepLabV3Plus(num_classes)
+    # model = UNet(num_classes)
     model = model.to(device)
-    criterion = FocalBCELoss(alpha=0.25, gamma=2)
+    weight = torch.ones(22)
+    weight[0] = 1. / 50.
+    weight = weight.to(device)
+    criterion = FocalBCELoss(alpha=0.05, gamma=10, weight=weight)
     optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
     # summary(model, (3, img_size, img_size))
     if resume:
@@ -80,14 +84,14 @@ def train(data_dir,
             inputs, targets = train_loader.next()
             inputs = torch.FloatTensor(inputs).to(device)
             targets = torch.FloatTensor(targets).to(device)
-            outputs = model(inputs)[0].sigmoid()
+            outputs = model(inputs)
             loss = criterion(outputs, targets)
             loss = loss.view(loss.size(0), -1).mean(1)
             against_examples.append(
                 [inputs[loss > loss.mean()], targets[loss > loss.mean()]])
             loss.mean().backward()
             total_loss += loss.mean().item()
-            pbar.set_description('train loss: %10lf, scale: %10d' % (total_loss / (batch_idx), inputs.size(2)))
+            pbar.set_description('train loss: %10lf scale: %10d' % (total_loss / batch_idx, inputs.size(2)))
             if batch_idx % accumulate == 0 or \
                     batch_idx == train_loader.iter_times:
                 optimizer.step()
@@ -98,7 +102,7 @@ def train(data_dir,
                     if against_inputs.size(0) < 2:
                         continue
                     against_targets = example[1]
-                    outputs = model(against_inputs)[0].sigmoid()
+                    outputs = model(against_inputs)
                     loss = criterion(outputs, against_targets)
                     loss.mean().backward()
                 optimizer.step()
