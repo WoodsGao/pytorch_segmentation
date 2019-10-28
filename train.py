@@ -1,8 +1,9 @@
 import torch
-from model import DeepLabV3Plus, UNet
+from model import DeepLabV3Plus
+from model import UNet
 import os
 from utils import device
-from utils.dataloader import Dataloader
+from utils.dataloader import Dataloader, show_batch
 from utils import augments
 from utils.loss import FocalBCELoss
 from utils.optim import AdaBoundW
@@ -38,7 +39,8 @@ def train(data_dir,
             augments.Normalize(),
             augments.NHWC2NCHW(),
         ],
-        multi_scale=multi_scale
+        multi_scale=multi_scale,
+        max_len=400,
     )
     val_loader = Dataloader(
         val_dir,
@@ -49,15 +51,18 @@ def train(data_dir,
             augments.Normalize(),
             augments.NHWC2NCHW(),
         ],
+        max_len=400,
     )
+    show_batch('train_batch.png', train_loader.data_list[:8], img_size, train_loader.classes, augments_list)
+    show_batch('val_batch.png', val_loader.data_list[:8], img_size, val_loader.classes)
     best_miou = 0
     best_loss = 1000
     epoch = 0
     num_classes = len(train_loader.classes)
-    model = DeepLabV3Plus(num_classes)
-    # model = UNet(num_classes)
+    # model = DeepLabV3Plus(num_classes)
+    model = UNet(num_classes)
     model = model.to(device)
-    criterion = FocalBCELoss(alpha=0.05, gamma=10)
+    criterion = FocalBCELoss(alpha=0.25, gamma=2)
     optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
     # summary(model, (3, img_size, img_size))
     if resume:
@@ -82,7 +87,12 @@ def train(data_dir,
             inputs = torch.FloatTensor(inputs).to(device)
             targets = torch.FloatTensor(targets).to(device)
             outputs = model(inputs)
-            loss = criterion(outputs, targets)
+            targets_obj = 1 - targets[:, 0:1]
+            outputs_obj = outputs[:, 0:1].sigmoid()
+            loss = criterion(outputs_obj, targets_obj)
+            targets_cls = targets[0, 1:] * targets_obj
+            outputs_cls = outputs[0, 1:].softmax(1) * targets_obj
+            loss += criterion(outputs_cls, targets_cls)
             loss = loss.view(loss.size(0), -1).mean(1)
             against_examples.append(
                 [inputs[loss > loss.mean()], targets[loss > loss.mean()]])
@@ -95,12 +105,17 @@ def train(data_dir,
                 optimizer.zero_grad()
                 # against examples training
                 for example in against_examples:
-                    against_inputs = example[0]
-                    if against_inputs.size(0) < 2:
+                    inputs = example[0]
+                    if inputs.size(0) < 2:
                         continue
-                    against_targets = example[1]
-                    outputs = model(against_inputs)
-                    loss = criterion(outputs, against_targets)
+                    targets = example[1]
+                    outputs = model(inputs)
+                    targets_obj = 1 - targets[:, 0:1]
+                    outputs_obj = outputs[:, 0:1].sigmoid()
+                    loss = criterion(outputs_obj, targets_obj)
+                    targets_cls = targets[0, 1:] * targets_obj
+                    outputs_cls = outputs[0, 1:].softmax(1) * targets_obj
+                    loss += criterion(outputs_cls, targets_cls)
                     loss.mean().backward()
                 optimizer.step()
                 optimizer.zero_grad()
@@ -133,23 +148,25 @@ def train(data_dir,
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', type=str, default='data/voc')
+    parser.add_argument('--data-dir', type=str, default='data/voc')
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--img_size', type=int, default=224)
-    parser.add_argument('--batch_size', type=int, default=8)
-    parser.add_argument('--accumulate', type=int, default=8)
+    parser.add_argument('--img-size', type=int, default=320)
+    parser.add_argument('--batch-size', type=int, default=4)
+    parser.add_argument('--accumulate', type=int, default=16)
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--resume', action='store_true')
-    parser.add_argument('--resume_path', type=str, default='')
-    parser.add_argument('--multi_scale', action='store_true')
+    parser.add_argument('--resume-path', type=str, default='')
+    parser.add_argument('--multi-scale', action='store_true')
     augments_list = [
         augments.PerspectiveProject(0.3, 0.2),
-        augments.HSV_H(0.3, 0.2),
-        augments.HSV_S(0.3, 0.2),
-        augments.HSV_V(0.3, 0.2),
+        augments.HSV_H(0.3, 0.5),
+        augments.HSV_S(0.3, 0.5),
+        augments.HSV_V(0.3, 0.5),
         augments.Rotate(1, 0.2),
-        augments.Blur(0.3, 0.2),
+        augments.Blur(0.03, 0.2),
         augments.Noise(0.3, 0.2),
+        augments.H_Flap(0.5),
+        augments.V_Flap(0.5)
     ]
     opt = parser.parse_args()
     train(data_dir=opt.data_dir,

@@ -10,7 +10,7 @@ weights/
 .vscode/
 data/
 core/
-
+*.png
 # Distribution / packaging
 .Python
 build/
