@@ -26,6 +26,7 @@ def train(data_dir,
           lr=1e-3,
           resume=False,
           weights='',
+          num_workers=-1,
           augments_list=[],
           multi_scale=False):
     if not os.path.exists('weights'):
@@ -48,7 +49,7 @@ def train(data_dir,
         train_data, 
         batch_size=batch_size,
         shuffle=True,
-        num_workers=min([os.cpu_count(), batch_size, 16]),
+        num_workers=min([os.cpu_count(), batch_size, 16]) if num_workers < 0 else num_workers,
     )
     val_data = SegmentationDataset(
         val_dir,
@@ -63,7 +64,7 @@ def train(data_dir,
         val_data, 
         batch_size=batch_size,
         shuffle=True,
-        num_workers=min([os.cpu_count(), batch_size, 16]),
+        num_workers=min([os.cpu_count(), batch_size, 16]) if num_workers < 0 else num_workers,
     )
     best_miou = 0
     best_loss = 1000
@@ -174,6 +175,7 @@ if __name__ == "__main__":
     parser.add_argument('--img-size', type=int, default=320)
     parser.add_argument('--batch-size', type=int, default=4)
     parser.add_argument('--accumulate', type=int, default=16)
+    parser.add_argument('--num-workers', type=int, default=-1)
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--resume', action='store_true')
     parser.add_argument('--weights', type=str, default='weights/last.pt')
@@ -198,5 +200,6 @@ if __name__ == "__main__":
           lr=opt.lr,
           resume=opt.resume,
           weights=opt.weights,
+          num_workers=opt.num_workers,
           augments_list=augments_list,
           multi_scale=opt.multi_scale)

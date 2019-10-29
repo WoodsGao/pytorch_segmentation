@@ -74,6 +74,8 @@ if __name__ == "__main__":
     parser.add_argument('--img-size', type=int, default=224)
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--weight-path', type=str, default='weights/last.pt')
+    parser.add_argument('--num-workers', type=int, default=-1)
+
     opt = parser.parse_args()
 
     criterion = FocalBCELoss(alpha=0.25, gamma=2)
@@ -90,6 +92,7 @@ if __name__ == "__main__":
         val_data, 
         batch_size=opt.batch_size,
         shuffle=True,
+        num_workers=min([os.cpu_count(), opt.batch_size, 16]) if opt.num_workers < 0 else opt.num_workers,
     )
     num_classes = len(val_loader.dataset.classes)
     model = UNet(num_classes)
