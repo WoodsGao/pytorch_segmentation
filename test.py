@@ -45,7 +45,7 @@ def test(model, val_loader, criterion, obj_conf=0.5):
             targets = targets.max(1)[1].view(-1)
             eq = predicted.eq(targets)
             total_size += predicted.size(0)
-            for c_i, c in enumerate(val_loader.classes):
+            for c_i, c in enumerate(val_loader.dataset.classes):
                 indices = targets.eq(c_i)
                 positive = indices.sum().item()
                 tpi = eq[indices].sum().item()
@@ -59,7 +59,7 @@ def test(model, val_loader, criterion, obj_conf=0.5):
                                  (val_loss / batch_idx,
                                   (tp / (tp + fp + fn)).mean()))
     print('')
-    for c_i, c in enumerate(val_loader.classes):
+    for c_i, c in enumerate(val_loader.dataset.classes):
         print('cls: %10s, targets: %10d, pre: %10lf, rec: %10lf, iou: %10lf' %
               (c[0], tp[c_i] + fn[c_i], tp[c_i] /
                (tp[c_i] + fp[c_i]), tp[c_i] /

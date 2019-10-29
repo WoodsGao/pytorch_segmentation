@@ -1,5 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
+import torch.nn.functional as F
 from utils.datasets import SegmentationDataset
 from model import DeepLabV3Plus
 from model import UNet
@@ -11,6 +12,7 @@ from utils.optim import AdaBoundW
 from tqdm import tqdm
 from test import test
 from torchsummary import summary
+import random
 import argparse
 
 print(device)
@@ -23,12 +25,14 @@ def train(data_dir,
           accumulate=2,
           lr=1e-3,
           resume=False,
-          resume_path='',
+          weights='',
           augments_list=[],
           multi_scale=False):
     if not os.path.exists('weights'):
         os.mkdir('weights')
-
+    if multi_scale:
+        img_size_min = max(img_size * 0.67 // 32, 1)
+        img_size_max = max(img_size * 1.5 // 32, 1)
     train_dir = os.path.join(data_dir, 'train.txt')
     val_dir = os.path.join(data_dir, 'val.txt')
     train_data = SegmentationDataset(
@@ -72,7 +76,7 @@ def train(data_dir,
     optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
     # summary(model, (3, img_size, img_size))
     if resume:
-        state_dict = torch.load(resume_path, map_location=device)
+        state_dict = torch.load(weights, map_location=device)
         best_miou = state_dict['miou']
         best_loss = state_dict['loss']
         epoch = state_dict['epoch']
@@ -95,6 +99,9 @@ def train(data_dir,
             batch_idx = idx + 1
             inputs = inputs.to(device)
             targets = targets.to(device)
+            if multi_scale:
+                inputs = F.interpolate(inputs, size=img_size, mode='bilinear', align_corners=False)
+                targets = F.interpolate(targets, size=img_size, mode='bilinear', align_corners=False)
             outputs = model(inputs)
             targets_obj = 1 - targets[:, 0:1]
             outputs_obj = outputs[:, 0:1].sigmoid()
@@ -130,6 +137,10 @@ def train(data_dir,
                 optimizer.step()
                 optimizer.zero_grad()
                 against_examples = []
+
+                # multi scale
+                if multi_scale:
+                    img_size = random.randrange(img_size_min, img_size_max) * 32
         print('')
         # validate
         val_loss, miou = test(model, val_loader, criterion, )
@@ -165,7 +176,7 @@ if __name__ == "__main__":
     parser.add_argument('--accumulate', type=int, default=16)
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--resume', action='store_true')
-    parser.add_argument('--resume-path', type=str, default='')
+    parser.add_argument('--weights', type=str, default='weights/last.pt')
     parser.add_argument('--multi-scale', action='store_true')
     augments_list = [
         augments.PerspectiveProject(0.3, 0.2),
@@ -186,6 +197,6 @@ if __name__ == "__main__":
           accumulate=opt.accumulate,
           lr=opt.lr,
           resume=opt.resume,
-          resume_path=opt.resume_path,
+          weights=opt.weights,
           augments_list=augments_list,
           multi_scale=opt.multi_scale)
