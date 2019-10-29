@@ -114,8 +114,9 @@ def train(data_dir,
                 [inputs[loss > loss.mean()], targets[loss > loss.mean()]])
             loss.mean().backward()
             total_loss += loss.mean().item()
-            pbar.set_description('train loss: %10lf scale: %10d' %
-                                 (total_loss / batch_idx, inputs.size(2)))
+            mem = torch.cuda.memory_cached() / 1E9 if torch.cuda.is_available() else 0  # (GB)
+            pbar.set_description('train mem: %5.2lfGB loss: %10lf scale: %10d' %
+                                 (mem, total_loss / batch_idx, inputs.size(2)))
             if batch_idx % accumulate == 0 or \
                     batch_idx == len(train_loader):
                 optimizer.step()
