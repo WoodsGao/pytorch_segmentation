@@ -1,5 +1,5 @@
 import torch
-from models import DeepLabV3Plus, UNet
+from models import DeepLabV3Plus
 import os
 from torch.utils.data import DataLoader
 from utils.datasets import SegmentationDataset
@@ -95,7 +95,7 @@ if __name__ == "__main__":
         num_workers=min([os.cpu_count(), opt.batch_size, 16]) if opt.num_workers < 0 else opt.num_workers,
     )
     num_classes = len(val_loader.dataset.classes)
-    model = UNet(num_classes)
+    model = DeepLabV3Plus(num_classes)
     model = model.to(device)
     # state_dict = torch.load(opt.weight_path, map_location=device)
     # model.load_state_dict(state_dict['model'])
