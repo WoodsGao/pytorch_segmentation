@@ -98,16 +98,13 @@ class UNet(nn.Module):
             ResBlock(512, 512, dilation=18),
         )
         self.high2middle = nn.Sequential(
-            ResBlock(512, 512),
             ResBlock(512, 256),
         )
         self.middle2low = nn.Sequential(
-            ResBlock(256, 256),
             ResBlock(256, 128),
         )
         self.up_conv = nn.Sequential(
             ResBlock(128, 64),
-            ResBlock(64, 64),
             nn.Dropout(0.5),
             bn(64),
             relu,
