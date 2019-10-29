@@ -82,8 +82,6 @@ class UNet(nn.Module):
         self.block1 = nn.Sequential(ResBlock(32, 64, stride=2))
         self.block2 = nn.Sequential(
             ResBlock(64, 128, stride=2),
-            ResBlock(128, 128),
-            ResBlock(128, 128, dilation=12),
         )
         self.block3 = nn.Sequential(
             ResBlock(128, 256, stride=2),
@@ -98,7 +96,6 @@ class UNet(nn.Module):
             ResBlock(512, 512, dilation=6),
             ResBlock(512, 512, dilation=12),
             ResBlock(512, 512, dilation=18),
-            ResBlock(512, 512), 
         )
         self.high2middle = nn.Sequential(
             ResBlock(512, 512),
