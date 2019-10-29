@@ -78,8 +78,8 @@ if __name__ == "__main__":
 
     criterion = FocalBCELoss(alpha=0.25, gamma=2)
     val_data = SegmentationDataset(
-        val_dir,
-        img_size,
+        opt.data_dir,
+        opt.img_size,
         augments=[
             augments.BGR2RGB(),
             augments.Normalize(),
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     )
     val_loader = DataLoader(
         val_data, 
-        batch_size=batch_size,
+        batch_size=opt.batch_size,
         shuffle=True,
     )
     num_classes = len(val_loader.dataset.classes)
