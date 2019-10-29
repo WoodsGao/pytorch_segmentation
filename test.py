@@ -65,7 +65,7 @@ def test(model, val_loader, criterion, obj_conf=0.5):
                (tp[c_i] + fp[c_i]), tp[c_i] /
                (tp[c_i] + fn[c_i]), tp[c_i] / (tp + fp + fn)[c_i]))
     val_loss /= len(val_loader)
-    return val_loss, (tp / (tp + fp + fn)).mean()
+    return val_loss.item(), (tp / (tp + fp + fn)).mean().item()
 
 
 if __name__ == "__main__":
