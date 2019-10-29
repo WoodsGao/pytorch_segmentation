@@ -77,9 +77,9 @@ class UNet(nn.Module):
         super(UNet, self).__init__()
         # full pre-activation
         self.conv1 = nn.Conv2d(3, 32, 7, 1, 3)
-        self.block1 = nn.Sequential(BLD(32, 64, stride=2))
+        self.block1 = nn.Sequential(ResBlock(32, 64, stride=2))
         self.block2 = nn.Sequential(
-            BLD(64, 128, stride=2),
+            ResBlock(64, 128, stride=2),
             ResBlock(128, 128),
             ResBlock(128, 128, dilation=12),
         )
@@ -87,24 +87,22 @@ class UNet(nn.Module):
             ResBlock(128, 256, stride=2),
             ResBlock(256, 256),
             ResBlock(256, 256, dilation=6),
-            ResBlock(256, 256),
             ResBlock(256, 256, dilation=12),
-            ResBlock(256, 256),
             ResBlock(256, 256, dilation=18),
-            ResBlock(256, 256),
-            ResBlock(256, 256, dilation=30),
-            ResBlock(256, 128),
+            ResBlock(256, 512, stride=2),
+            ResBlock(512, 512),
+            ResBlock(512, 512, dilation=6),
+            ResBlock(512, 512, dilation=12),
+            ResBlock(512, 512, dilation=18),
+            ResBlock(512, 128), 
         )
         self.up_conv1 = nn.Sequential(
-            ResBlock(128 * 3, 128 * 2),
-            ResBlock(128 * 2, 128),
+            ResBlock(128, 128),
             nn.Dropout(0.5),
-            BLD(128, 128, 1),
             bn(128),
             relu,
             nn.Conv2d(128, num_classes, 1),
         )
-        self.aspp_pooling = AsppPooling(128, 128)
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
@@ -117,11 +115,12 @@ class UNet(nn.Module):
         x = self.conv1(x)
         x = self.block1(x)
         x = self.block2(x)
-        feat2 = x
+        low_level_feat = x
         x = self.block3(x)
+        x = x + F.adaptive_avg_pool2d(x, (1, 1))
         x = F.interpolate(
-            x, scale_factor=2, mode='bilinear', align_corners=True)
-        x = torch.cat([x, feat2, self.aspp_pooling(feat2)], 1)
+            x, scale_factor=4, mode='bilinear', align_corners=True)
+        x = x + low_level_feat
         x = self.up_conv1(x)
         x = F.interpolate(x,
                           scale_factor=4,
