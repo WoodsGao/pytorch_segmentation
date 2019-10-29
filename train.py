@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from utils.datasets import SegmentationDataset
-from models import DeepLabV3Plus
+from models import DeepLabV3Plus, DeepLabV3PlusMini
 import os
 from utils import device
 from utils import augments
@@ -69,7 +69,8 @@ def train(data_dir,
     best_loss = 1000
     epoch = 0
     num_classes = len(train_loader.dataset.classes)
-    model = DeepLabV3Plus(num_classes)
+    # model = DeepLabV3Plus(num_classes)
+    model = DeepLabV3PlusMini(num_classes)
     model = model.to(device)
     criterion = FocalBCELoss(alpha=0.25, gamma=2)
     optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
