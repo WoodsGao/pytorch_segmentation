@@ -1,5 +1,5 @@
 import torch
-from model import DeepLabV3Plus, UNet
+from models import DeepLabV3Plus, UNet
 import os
 from torch.utils.data import DataLoader
 from utils.datasets import SegmentationDataset

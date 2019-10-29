@@ -2,8 +2,8 @@ import torch
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from utils.datasets import SegmentationDataset
-from model import DeepLabV3Plus
-from model import UNet
+from models import DeepLabV3Plus
+from models import UNet
 import os
 from utils import device
 from utils import augments
