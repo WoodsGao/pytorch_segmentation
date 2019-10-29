@@ -112,6 +112,7 @@ def train(data_dir,
             loss = loss.view(loss.size(0), -1).mean(1)
             against_examples.append(
                 [inputs[loss > loss.mean()], targets[loss > loss.mean()]])
+            loss /= 64
             loss.sum().backward()
             total_loss += loss.sum().item()
             mem = torch.cuda.memory_cached() / 1E9 if torch.cuda.is_available() else 0  # (GB)
@@ -134,6 +135,7 @@ def train(data_dir,
                     targets_cls = targets[0, 1:] * targets_obj
                     outputs_cls = outputs[0, 1:].softmax(1) * targets_obj
                     loss += criterion(outputs_cls, targets_cls)
+                    loss /= 64
                     loss.sum().backward()
                 optimizer.step()
                 optimizer.zero_grad()
