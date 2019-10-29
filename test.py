@@ -1,7 +1,8 @@
 import torch
 from model import DeepLabV3Plus, UNet
 import os
-from utils.dataloader import Dataloader
+from torch.utils.data import DataLoader
+from utils.datasets import SegmentationDataset
 from utils import augments
 from utils.loss import FocalBCELoss
 from utils import device
@@ -12,18 +13,21 @@ import argparse
 def test(model, val_loader, criterion, obj_conf=0.5):
     model.eval()
     val_loss = 0
-    num_classes = len(val_loader.classes)
+    num_classes = len(val_loader.dataset.classes)
     total_size = 0
     # true positive / intersection
     tp = torch.zeros(num_classes)
     fp = torch.zeros(num_classes)
     fn = torch.zeros(num_classes)
     with torch.no_grad():
-        pbar = tqdm(range(1, val_loader.iter_times + 1))
-        for batch_idx in pbar:
-            inputs, targets = val_loader.next()
-            inputs = torch.FloatTensor(inputs).to(device)
-            targets = torch.FloatTensor(targets).to(device)
+        pbar = tqdm(enumerate(val_loader), total=len(val_loader))
+        for idx, (
+                inputs,
+                targets,
+        ) in pbar:
+            batch_idx = idx + 1
+            inputs = inputs.to(device)
+            targets = targets.to(device)
             outputs = model(inputs)
             targets_obj = 1 - targets[:, 0:1]
             outputs_obj = outputs[:, 0:1].sigmoid()
@@ -73,17 +77,21 @@ if __name__ == "__main__":
     opt = parser.parse_args()
 
     criterion = FocalBCELoss(alpha=0.25, gamma=2)
-    val_loader = Dataloader(
-        opt.data_dir,
-        img_size=opt.img_size,
-        batch_size=opt.batch_size,
+    val_data = SegmentationDataset(
+        val_dir,
+        img_size,
         augments=[
             augments.BGR2RGB(),
             augments.Normalize(),
             augments.NHWC2NCHW(),
-        ],
+        ]
     )
-    num_classes = len(val_loader.classes)
+    val_loader = DataLoader(
+        val_data, 
+        batch_size=batch_size,
+        shuffle=True,
+    )
+    num_classes = len(val_loader.dataset.classes)
     model = UNet(num_classes)
     model = model.to(device)
     # state_dict = torch.load(opt.weight_path, map_location=device)

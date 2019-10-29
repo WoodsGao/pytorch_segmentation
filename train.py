@@ -1,9 +1,10 @@
 import torch
+from torch.utils.data import DataLoader
+from utils.datasets import SegmentationDataset
 from model import DeepLabV3Plus
 from model import UNet
 import os
 from utils import device
-from utils.dataloader import Dataloader, show_batch
 from utils import augments
 from utils.loss import FocalBCELoss
 from utils.optim import AdaBoundW
@@ -23,42 +24,47 @@ def train(data_dir,
           lr=1e-3,
           resume=False,
           resume_path='',
-          augments_list=[], 
+          augments_list=[],
           multi_scale=False):
     if not os.path.exists('weights'):
         os.mkdir('weights')
 
     train_dir = os.path.join(data_dir, 'train.txt')
     val_dir = os.path.join(data_dir, 'val.txt')
-    train_loader = Dataloader(
+    train_data = SegmentationDataset(
         train_dir,
-        img_size=img_size,
-        batch_size=batch_size,
+        img_size,
         augments=augments_list + [
             augments.BGR2RGB(),
             augments.Normalize(),
             augments.NHWC2NCHW(),
-        ],
-        multi_scale=multi_scale,
-        max_len=400,
+        ]
     )
-    val_loader = Dataloader(
-        val_dir,
-        img_size=img_size,
+    train_loader = DataLoader(
+        train_data, 
         batch_size=batch_size,
+        shuffle=True,
+        num_workers=min([os.cpu_count(), batch_size, 16]),
+    )
+    val_data = SegmentationDataset(
+        val_dir,
+        img_size,
         augments=[
             augments.BGR2RGB(),
             augments.Normalize(),
             augments.NHWC2NCHW(),
-        ],
-        max_len=400,
+        ]
     )
-    show_batch('train_batch.png', train_loader.data_list[:8], img_size, train_loader.classes, augments_list)
-    show_batch('val_batch.png', val_loader.data_list[:8], img_size, val_loader.classes)
+    val_loader = DataLoader(
+        val_data, 
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=min([os.cpu_count(), batch_size, 16]),
+    )
     best_miou = 0
     best_loss = 1000
     epoch = 0
-    num_classes = len(train_loader.classes)
+    num_classes = len(train_loader.dataset.classes)
     # model = DeepLabV3Plus(num_classes)
     model = UNet(num_classes)
     model = model.to(device)
@@ -80,12 +86,15 @@ def train(data_dir,
         # train
         model.train()
         total_loss = 0
-        pbar = tqdm(range(1, train_loader.iter_times + 1))
+        pbar = tqdm(enumerate(train_loader), total=len(train_loader))
         optimizer.zero_grad()
-        for batch_idx in pbar:
-            inputs, targets = train_loader.next()
-            inputs = torch.FloatTensor(inputs).to(device)
-            targets = torch.FloatTensor(targets).to(device)
+        for idx, (
+                inputs,
+                targets,
+        ) in pbar:
+            batch_idx = idx + 1
+            inputs = inputs.to(device)
+            targets = targets.to(device)
             outputs = model(inputs)
             targets_obj = 1 - targets[:, 0:1]
             outputs_obj = outputs[:, 0:1].sigmoid()
@@ -98,9 +107,10 @@ def train(data_dir,
                 [inputs[loss > loss.mean()], targets[loss > loss.mean()]])
             loss.mean().backward()
             total_loss += loss.mean().item()
-            pbar.set_description('train loss: %10lf scale: %10d' % (total_loss / batch_idx, inputs.size(2)))
+            pbar.set_description('train loss: %10lf scale: %10d' %
+                                 (total_loss / batch_idx, inputs.size(2)))
             if batch_idx % accumulate == 0 or \
-                    batch_idx == train_loader.iter_times:
+                    batch_idx == len(train_loader):
                 optimizer.step()
                 optimizer.zero_grad()
                 # against examples training
@@ -122,7 +132,7 @@ def train(data_dir,
                 against_examples = []
         print('')
         # validate
-        val_loss, miou = test(model, val_loader, criterion)
+        val_loss, miou = test(model, val_loader, criterion, )
         # Save checkpoint.
         state_dict = {
             'model': model.state_dict(),
