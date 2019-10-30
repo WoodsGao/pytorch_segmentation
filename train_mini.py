@@ -86,7 +86,7 @@ def train(data_dir,
         optimizer.load_state_dict(state_dict['optimizer'])
 
     # create dataset
-    against_examples = []
+    # against_examples = []
     while epoch < epochs:
         print('%d/%d' % (epoch, epochs))
         # train
@@ -112,8 +112,8 @@ def train(data_dir,
             outputs_cls = outputs[0, 1:].softmax(1) * targets_obj
             loss += criterion(outputs_cls, targets_cls)
             loss = loss.view(loss.size(0), -1).mean(1)
-            against_examples.append(
-                [inputs[loss > loss.mean()], targets[loss > loss.mean()]])
+            # against_examples.append(
+            #     [inputs[loss > loss.mean()], targets[loss > loss.mean()]])
             loss.mean().backward()
             total_loss += loss.mean().item()
             mem = torch.cuda.memory_cached() / 1E9 if torch.cuda.is_available() else 0  # (GB)
@@ -123,23 +123,24 @@ def train(data_dir,
                     batch_idx == len(train_loader):
                 optimizer.step()
                 optimizer.zero_grad()
-                # against examples training
-                for example in against_examples:
-                    inputs = example[0]
-                    if inputs.size(0) < 2:
-                        continue
-                    targets = example[1]
-                    outputs = model(inputs)
-                    targets_obj = 1 - targets[:, 0:1]
-                    outputs_obj = outputs[:, 0:1].sigmoid()
-                    loss = criterion(outputs_obj, targets_obj)
-                    targets_cls = targets[0, 1:] * targets_obj
-                    outputs_cls = outputs[0, 1:].softmax(1) * targets_obj
-                    loss += criterion(outputs_cls, targets_cls)
-                    loss.mean().backward()
-                optimizer.step()
-                optimizer.zero_grad()
-                against_examples = []
+
+                # # against examples training
+                # for example in against_examples:
+                #     inputs = example[0]
+                #     if inputs.size(0) < 2:
+                #         continue
+                #     targets = example[1]
+                #     outputs = model(inputs)
+                #     targets_obj = 1 - targets[:, 0:1]
+                #     outputs_obj = outputs[:, 0:1].sigmoid()
+                #     loss = criterion(outputs_obj, targets_obj)
+                #     targets_cls = targets[0, 1:] * targets_obj
+                #     outputs_cls = outputs[0, 1:].softmax(1) * targets_obj
+                #     loss += criterion(outputs_cls, targets_cls)
+                #     loss.mean().backward()
+                # optimizer.step()
+                # optimizer.zero_grad()
+                # against_examples = []
 
                 # multi scale
                 if multi_scale:
