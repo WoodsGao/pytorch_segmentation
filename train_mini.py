@@ -71,8 +71,8 @@ def train(data_dir,
     epoch = 0
     classes = train_loader.generator.dataset.classes
     num_classes = len(classes)
-    model = DeepLabV3Plus(num_classes)
-    # model = DeepLabV3PlusMini(num_classes)
+    # model = DeepLabV3Plus(num_classes)
+    model = DeepLabV3PlusMini(num_classes)
     model = model.to(device)
     criterion = FocalBCELoss(alpha=0.25, gamma=2)
     optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
