@@ -47,7 +47,7 @@ def train(data_dir,
         ]
     )
     train_loader = DataLoader(
-        train_data, 
+        train_data,
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
@@ -63,7 +63,7 @@ def train(data_dir,
         ]
     )
     val_loader = DataLoader(
-        val_data, 
+        val_data,
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
