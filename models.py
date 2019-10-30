@@ -39,24 +39,28 @@ class DeepLabV3Plus(nn.Module):
             ResBlock(512, 512, dilation=30),
             ResBlock(512, 512),
         )
+        self.aspp_pooling1 = AsppPooling(512, 512)
         self.up_conv1 = nn.Sequential(
-            ResBlock(512, 256),
-            ResBlock(256, 256, dilation=6),
+            ResBlock(1024, 512),
+            ResBlock(512, 256, dilation=6),
             ResBlock(256, 256),
         )
+        self.aspp_pooling2 = AsppPooling(256, 256)
         self.up_conv2 = nn.Sequential(
+            ResBlock(768, 512),
+            ResBlock(512, 256, dilation=6),
             ResBlock(256, 128),
-            ResBlock(128, 128, dilation=6),
-            ResBlock(128, 128),
         )
+        self.aspp_pooling3 = AsppPooling(128, 128)
         self.up_conv3 = nn.Sequential(
+            ResBlock(384, 256),
+            ResBlock(256, 128, dilation=6),
             ResBlock(128, 64),
-            ResBlock(64, 64, dilation=6),
-            ResBlock(64, 64),
         )
+        self.aspp_pooling4 = AsppPooling(64, 64)
         self.up_conv4 = nn.Sequential(
-            ResBlock(64, 64),
-            ResBlock(64, 64, dilation=6),
+            ResBlock(192, 128),
+            ResBlock(128, 64, dilation=6),
             ResBlock(64, 64),
             nn.Dropout(0.5),
             bn(64),
@@ -81,31 +85,28 @@ class DeepLabV3Plus(nn.Module):
         feat3 = x
         x = self.block4(x)
 
-        x = x + F.adaptive_avg_pool2d(x, (1, 1))
+        x = torch.cat([x, self.aspp_pooling1(x)], 1)
         x = self.up_conv1(x)
         x = F.interpolate(x,
                           scale_factor=2,
                           mode='bilinear',
                           align_corners=True)
 
-        x = x + feat3
-        x = x + F.adaptive_avg_pool2d(feat3, (1, 1))
+        x = torch.cat([x, feat3, self.aspp_pooling2(feat3)], 1)
         x = self.up_conv2(x)
         x = F.interpolate(x,
                           scale_factor=2,
                           mode='bilinear',
                           align_corners=True)
 
-        x = x + feat2
-        x = x + F.adaptive_avg_pool2d(feat2, (1, 1))
+        x = torch.cat([x, feat2, self.aspp_pooling3(feat2)], 1)
         x = self.up_conv3(x)
         x = F.interpolate(x,
                           scale_factor=2,
                           mode='bilinear',
                           align_corners=True)
 
-        x = x + feat1
-        x = x + F.adaptive_avg_pool2d(feat1, (1, 1))
+        x = torch.cat([x, feat1, self.aspp_pooling4(feat1)], 1)
         x = self.up_conv4(x)
         x = F.interpolate(x,
                           scale_factor=2,
@@ -127,9 +128,9 @@ class DeepLabV3PlusMini(nn.Module):
         )
         self.block3 = nn.Sequential(
             ResBlock(128, 256, stride=2, se_block=False),
+            ResBlock(256, 256, se_block=False),
             ResBlock(256, 256, dilation=6, se_block=False),
-            ResBlock(256, 256, dilation=12, se_block=False),
-            ResBlock(256, 256, dilation=18, se_block=False),
+            ResBlock(256, 256, se_block=False),
         )
         self.up_conv1 = nn.Sequential(ResBlock(256, 128, se_block=False), )
         self.up_conv2 = nn.Sequential(

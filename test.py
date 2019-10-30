@@ -22,12 +22,10 @@ def test(model, val_loader, criterion, obj_conf=0.5):
     fp = torch.zeros(num_classes)
     fn = torch.zeros(num_classes)
     with torch.no_grad():
-        pbar = tqdm(enumerate(val_loader), total=len(val_loader))
-        for idx, (
-                inputs,
-                targets,
-        ) in pbar:
+        pbar = tqdm(range(len(val_loader)))
+        for idx in pbar:
             batch_idx = idx + 1
+            inputs, targets = next(val_loader)
             inputs = inputs.to(device)
             targets = targets.to(device)
             outputs = model(inputs)

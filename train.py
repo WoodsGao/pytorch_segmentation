@@ -88,18 +88,17 @@ def train(data_dir,
         optimizer.load_state_dict(state_dict['optimizer'])
 
     # create dataset
-    against_examples = []
+    against_inputs = []
+    against_targets = []
     while epoch < epochs:
         print('%d/%d' % (epoch, epochs))
         # train
         model.train()
         total_loss = 0
-        pbar = tqdm(enumerate(train_loader), total=len(train_loader))
+        pbar = tqdm(range(len(train_loader)))
         optimizer.zero_grad()
-        for idx, (
-                inputs,
-                targets,
-        ) in pbar:
+        for idx in pbar:
+            inputs, targets = next(train_loader)
             batch_idx = idx + 1
             inputs = inputs.to(device)
             targets = targets.to(device)
@@ -110,23 +109,30 @@ def train(data_dir,
             outputs = outputs.softmax(1)
             loss = criterion(outputs, targets)
             loss = loss.view(loss.size(0), -1).mean(1)
-            against_examples.append(
-                [inputs[loss > loss.mean()], targets[loss > loss.mean()]])
+            against_inputs.append(inputs[loss > loss.mean())
+            against_targets.append(targets[loss > loss.mean()])
             loss.mean().backward()
             total_loss += loss.mean().item()
             mem = torch.cuda.memory_cached() / 1E9 if torch.cuda.is_available() else 0  # (GB)
-            pbar.set_description('train mem: %5.2lfGB loss: %10lf scale: %10d' %
+            pbar.set_description('train mem: %5.2lfGB loss: %10lf scale: %4d' %
                                  (mem, total_loss / batch_idx, inputs.size(2)))
             if batch_idx % accumulate == 0 or \
                     batch_idx == len(train_loader):
                 optimizer.step()
                 optimizer.zero_grad()
-                # against examples training
-                for example in against_examples:
-                    inputs = example[0]
+                # multi scale
+                if multi_scale:
+                    img_size = random.randrange(img_size_min, img_size_max) * 32
+                # against inputs training
+                if len(against_inputs) == 0:
+                    continue
+                against_inputs = torch.cat(against_inputs, 0)
+                against_targets = torch.cat(against_targets, 0)
+                for ei in range(0, against_inputs.size(0), batch_size):
+                    inputs = against_inputs[ei:ei + batch_size]
                     if inputs.size(0) < 2:
                         continue
-                    targets = example[1]
+                    targets = against_targets[ei:ei + batch_size]
                     outputs = model(inputs)
                     outputs = outputs.softmax(1)
                     loss = criterion(outputs, targets)
@@ -135,9 +141,6 @@ def train(data_dir,
                 optimizer.zero_grad()
                 against_examples = []
 
-                # multi scale
-                if multi_scale:
-                    img_size = random.randrange(img_size_min, img_size_max) * 32
             torch.cuda.empty_cache()
         print('')
         # validate

@@ -11,8 +11,9 @@ class CachedGenerator:
         t.start()
 
     def worker(self):
-        for item in self.generator:
-            self.queue.put(item)
+        while True:
+            for item in self.generator:
+                self.queue.put(item)
 
     def __iter__(self):
         return self
