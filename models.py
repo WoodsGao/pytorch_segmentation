@@ -126,14 +126,14 @@ class DeepLabV3PlusMini(nn.Module):
             ResBlock(128, 128, dilation=6),
         )
         self.block3 = nn.Sequential(
-            ResBlock(128, 256, stride=2),
-            ResBlock(256, 256, dilation=6),
-            ResBlock(256, 256, dilation=12),
-            ResBlock(256, 256, dilation=18),
+            ResBlock(128, 256, stride=2, se_block=False),
+            ResBlock(256, 256, dilation=6, se_block=False),
+            ResBlock(256, 256, dilation=12, se_block=False),
+            ResBlock(256, 256, dilation=18, se_block=False),
         )
-        self.up_conv1 = nn.Sequential(ResBlock(256, 128), )
+        self.up_conv1 = nn.Sequential(ResBlock(256, 128, se_block=False), )
         self.up_conv2 = nn.Sequential(
-            ResBlock(128, 64),
+            ResBlock(128, 64, se_block=False),
             nn.Dropout(0.5),
             bn(64),
             relu,
