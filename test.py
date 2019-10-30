@@ -5,7 +5,6 @@ from torch.utils.data import DataLoader
 from utils.datasets import SegmentationDataset
 from utils import augments
 from utils.loss import FocalBCELoss
-from utils.dataloaders import FileQueueDataLoader
 from utils import device
 from tqdm import tqdm
 import argparse
