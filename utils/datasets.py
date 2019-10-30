@@ -77,7 +77,7 @@ class SegmentationDataset(torch.utils.data.Dataset):
         self.counts[idx] += 1
         item = torch.load(self.cache_list[idx])
         if self.counts[idx] > randint(3, 15):
-            t = Thread(target=self.refresh_cache, args=(idx))
+            t = Thread(target=self.refresh_cache, args=(idx, ))
             t.setDaemon(True)
             t.start()
         return item
