@@ -8,6 +8,7 @@ from utils import device
 from utils import augments
 from utils.loss import FocalBCELoss
 from utils.optim import AdaBoundW
+from utils.generators import CachedGenerator
 from tqdm import tqdm
 from test import test
 from torchsummary import summary
@@ -44,12 +45,12 @@ def train(data_dir,
             augments.NHWC2NCHW(),
         ]
     )
-    train_loader = DataLoader(
+    train_loader = CachedGenerator(DataLoader(
         train_data, 
         batch_size=batch_size,
         shuffle=True,
         num_workers=min([os.cpu_count(), batch_size, 16]) if num_workers < 0 else num_workers,
-    )
+    ), 300)
     val_data = SegmentationDataset(
         val_dir,
         img_size,
@@ -59,16 +60,17 @@ def train(data_dir,
             augments.NHWC2NCHW(),
         ]
     )
-    val_loader = DataLoader(
+    val_loader = CachedGenerator(DataLoader(
         val_data, 
         batch_size=batch_size,
         shuffle=True,
         num_workers=min([os.cpu_count(), batch_size, 16]) if num_workers < 0 else num_workers,
-    )
+    ), 300)
     best_miou = 0
     best_loss = 1000
     epoch = 0
-    num_classes = len(train_loader.dataset.classes)
+    classes = train_loader.generator.dataset.classes
+    num_classes = len(classes)
     model = DeepLabV3Plus(num_classes)
     # model = DeepLabV3PlusMini(num_classes)
     model = model.to(device)

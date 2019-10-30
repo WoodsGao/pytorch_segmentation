@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader
 from utils.datasets import SegmentationDataset
 from utils import augments
 from utils.loss import FocalBCELoss
+from utils.generators import CachedGenerator
 from utils import device
 from tqdm import tqdm
 import argparse
@@ -13,7 +14,8 @@ import argparse
 def test(model, val_loader, criterion, obj_conf=0.5):
     model.eval()
     val_loss = 0
-    num_classes = len(val_loader.dataset.classes)
+    classes = val_loader.generator.dataset.classes
+    num_classes = len(classes)
     total_size = 0
     # true positive / intersection
     tp = torch.zeros(num_classes)
@@ -45,7 +47,7 @@ def test(model, val_loader, criterion, obj_conf=0.5):
             targets = targets.max(1)[1].view(-1)
             eq = predicted.eq(targets)
             total_size += predicted.size(0)
-            for c_i, c in enumerate(val_loader.dataset.classes):
+            for c_i, c in enumerate(classes):
                 indices = targets.eq(c_i)
                 positive = indices.sum().item()
                 tpi = eq[indices].sum().item()
@@ -59,7 +61,7 @@ def test(model, val_loader, criterion, obj_conf=0.5):
                                  (val_loss / batch_idx,
                                   (tp / (tp + fp + fn)).mean()))
     print('')
-    for c_i, c in enumerate(val_loader.dataset.classes):
+    for c_i, c in enumerate(classes):
         print('cls: %10s, targets: %10d, pre: %10lf, rec: %10lf, iou: %10lf' %
               (c[0], tp[c_i] + fn[c_i], tp[c_i] /
                (tp[c_i] + fp[c_i]), tp[c_i] /
@@ -88,13 +90,14 @@ if __name__ == "__main__":
             augments.NHWC2NCHW(),
         ]
     )
-    val_loader = DataLoader(
+    val_loader = CachedGenerator(DataLoader(
         val_data, 
         batch_size=opt.batch_size,
         shuffle=True,
         num_workers=min([os.cpu_count(), opt.batch_size, 16]) if opt.num_workers < 0 else opt.num_workers,
-    )
-    num_classes = len(val_loader.dataset.classes)
+    ), 300)
+    classes = val_loader.generator.dataset.classes
+    num_classes = len(classes)
     model = DeepLabV3Plus(num_classes)
     model = model.to(device)
     # state_dict = torch.load(opt.weight_path, map_location=device)
