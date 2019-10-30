@@ -16,6 +16,8 @@ import random
 import argparse
 
 print(device)
+if torch.cuda.is_available():
+    torch.backends.cudnn.benchmark = True
 
 
 def train(data_dir,
@@ -36,36 +38,36 @@ def train(data_dir,
         img_size_max = max(img_size * 1.5 // 32, 1)
     train_dir = os.path.join(data_dir, 'train.txt')
     val_dir = os.path.join(data_dir, 'val.txt')
-    train_data = SegmentationDataset(
-        train_dir,
-        img_size,
-        augments=augments_list + [
-            augments.BGR2RGB(),
-            augments.Normalize(),
-            augments.NHWC2NCHW(),
-        ]
-    )
-    train_loader = CachedGenerator(DataLoader(
-        train_data, 
-        batch_size=batch_size,
-        shuffle=True,
-        num_workers=min([os.cpu_count(), batch_size, 16]) if num_workers < 0 else num_workers,
-    ), 300)
-    val_data = SegmentationDataset(
-        val_dir,
-        img_size,
-        augments=[
-            augments.BGR2RGB(),
-            augments.Normalize(),
-            augments.NHWC2NCHW(),
-        ]
-    )
-    val_loader = CachedGenerator(DataLoader(
-        val_data, 
-        batch_size=batch_size,
-        shuffle=True,
-        num_workers=min([os.cpu_count(), batch_size, 16]) if num_workers < 0 else num_workers,
-    ), 300)
+    train_data = SegmentationDataset(train_dir,
+                                     img_size,
+                                     augments=augments_list + [
+                                         augments.BGR2RGB(),
+                                         augments.Normalize(),
+                                         augments.NHWC2NCHW(),
+                                     ])
+    train_loader = CachedGenerator(
+        DataLoader(
+            train_data,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=min([os.cpu_count(), batch_size, 16])
+            if num_workers < 0 else num_workers,
+        ), 300)
+    val_data = SegmentationDataset(val_dir,
+                                   img_size,
+                                   augments=[
+                                       augments.BGR2RGB(),
+                                       augments.Normalize(),
+                                       augments.NHWC2NCHW(),
+                                   ])
+    val_loader = CachedGenerator(
+        DataLoader(
+            val_data,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=min([os.cpu_count(), batch_size, 16])
+            if num_workers < 0 else num_workers,
+        ), 300)
     best_miou = 0
     best_loss = 1000
     epoch = 0
@@ -102,8 +104,14 @@ def train(data_dir,
             inputs = inputs.to(device)
             targets = targets.to(device)
             if multi_scale:
-                inputs = F.interpolate(inputs, size=img_size, mode='bilinear', align_corners=False)
-                targets = F.interpolate(targets, size=img_size, mode='bilinear', align_corners=False)
+                inputs = F.interpolate(inputs,
+                                       size=img_size,
+                                       mode='bilinear',
+                                       align_corners=False)
+                targets = F.interpolate(targets,
+                                        size=img_size,
+                                        mode='bilinear',
+                                        align_corners=False)
             outputs = model(inputs)
             outputs = outputs.softmax(1)
             loss = criterion(outputs, targets)
@@ -112,38 +120,29 @@ def train(data_dir,
             #     [inputs[loss > loss.mean()], targets[loss > loss.mean()]])
             loss.mean().backward()
             total_loss += loss.mean().item()
-            mem = torch.cuda.memory_cached() / 1E9 if torch.cuda.is_available() else 0  # (GB)
-            pbar.set_description('train mem: %5.2lfGB loss: %10lf scale: %10d' %
-                                 (mem, total_loss / batch_idx, inputs.size(2)))
+            mem = torch.cuda.memory_cached() / 1E9 if torch.cuda.is_available(
+            ) else 0  # (GB)
+            pbar.set_description(
+                'train mem: %5.2lfGB loss: %10lf scale: %10d' %
+                (mem, total_loss / batch_idx, inputs.size(2)))
             if batch_idx % accumulate == 0 or \
                     batch_idx == len(train_loader):
                 optimizer.step()
                 optimizer.zero_grad()
 
-                # # against examples training
-                # for example in against_examples:
-                #     inputs = example[0]
-                #     if inputs.size(0) < 2:
-                #         continue
-                #     targets = example[1]
-                #     outputs = model(inputs)
-                #     targets_obj = 1 - targets[:, 0:1]
-                #     outputs_obj = outputs[:, 0:1].sigmoid()
-                #     loss = criterion(outputs_obj, targets_obj)
-                #     targets_cls = targets[0, 1:] * targets_obj
-                #     outputs_cls = outputs[0, 1:].softmax(1) * targets_obj
-                #     loss += criterion(outputs_cls, targets_cls)
-                #     loss.mean().backward()
-                # optimizer.step()
-                # optimizer.zero_grad()
-                # against_examples = []
-
                 # multi scale
                 if multi_scale:
-                    img_size = random.randrange(img_size_min, img_size_max) * 32
+                    img_size = random.randrange(img_size_min,
+                                                img_size_max) * 32
+
+            torch.cuda.empty_cache()
         print('')
         # validate
-        val_loss, miou = test(model, val_loader, criterion, )
+        val_loss, miou = test(
+            model,
+            val_loader,
+            criterion,
+        )
         # Save checkpoint.
         state_dict = {
             'model': model.state_dict(),

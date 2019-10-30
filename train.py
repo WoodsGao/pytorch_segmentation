@@ -16,6 +16,8 @@ import random
 import argparse
 
 print(device)
+if torch.cuda.is_available():
+    torch.backends.cudnn.benchmark = True
 
 
 def train(data_dir,
@@ -136,6 +138,7 @@ def train(data_dir,
                 # multi scale
                 if multi_scale:
                     img_size = random.randrange(img_size_min, img_size_max) * 32
+            torch.cuda.empty_cache()
         print('')
         # validate
         val_loss, miou = test(model, val_loader, criterion, )
