@@ -105,12 +105,8 @@ def train(data_dir,
                 inputs = F.interpolate(inputs, size=img_size, mode='bilinear', align_corners=False)
                 targets = F.interpolate(targets, size=img_size, mode='bilinear', align_corners=False)
             outputs = model(inputs)
-            targets_obj = 1 - targets[:, 0:1]
-            outputs_obj = outputs[:, 0:1].sigmoid()
-            loss = criterion(outputs_obj, targets_obj)
-            targets_cls = targets[0, 1:] * targets_obj
-            outputs_cls = outputs[0, 1:].softmax(1) * targets_obj
-            loss += criterion(outputs_cls, targets_cls)
+            outputs = outputs.softmax(1)
+            loss = criterion(outputs, targets)
             loss = loss.view(loss.size(0), -1).mean(1)
             against_examples.append(
                 [inputs[loss > loss.mean()], targets[loss > loss.mean()]])
@@ -130,12 +126,8 @@ def train(data_dir,
                         continue
                     targets = example[1]
                     outputs = model(inputs)
-                    targets_obj = 1 - targets[:, 0:1]
-                    outputs_obj = outputs[:, 0:1].sigmoid()
-                    loss = criterion(outputs_obj, targets_obj)
-                    targets_cls = targets[0, 1:] * targets_obj
-                    outputs_cls = outputs[0, 1:].softmax(1) * targets_obj
-                    loss += criterion(outputs_cls, targets_cls)
+                    outputs = outputs.softmax(1)
+                    loss = criterion(outputs, targets)
                     loss.mean().backward()
                 optimizer.step()
                 optimizer.zero_grad()
