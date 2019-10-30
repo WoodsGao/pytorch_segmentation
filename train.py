@@ -76,7 +76,7 @@ def train(data_dir,
     model = model.to(device)
     criterion = FocalBCELoss(alpha=0.25, gamma=2)
     optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
-    summary(model, (3, img_size, img_size))
+    # summary(model, (3, img_size, img_size))
     if resume:
         state_dict = torch.load(weights, map_location=device)
         best_miou = state_dict['miou']

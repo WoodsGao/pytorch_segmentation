@@ -155,7 +155,7 @@ class DeepLabV3PlusMini(nn.Module):
         feat2 = x
         x = self.block3(x)
 
-        x = x + F.adaptive_avg_pool2d(x, (1, 1))
+        # x = x + F.adaptive_avg_pool2d(x, (1, 1))
         x = self.up_conv1(x)
         x = F.interpolate(x,
                           scale_factor=2,
@@ -163,7 +163,7 @@ class DeepLabV3PlusMini(nn.Module):
                           align_corners=True)
 
         x = x + feat2
-        x = x + F.adaptive_avg_pool2d(feat2, (1, 1))
+        # x = x + F.adaptive_avg_pool2d(feat2, (1, 1))
         x = self.up_conv2(x)
         x = F.interpolate(x,
                           scale_factor=4,
