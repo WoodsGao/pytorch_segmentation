@@ -2,12 +2,20 @@ import cv2
 import numpy as np
 import os
 import torch
+from tqdm import tqdm
+from random import randint
+from threading import Thread
 from . import config
 
 
 class SegmentationDataset(torch.utils.data.Dataset):
-    def __init__(self, path, img_size=224, augments=[]):
+    def __init__(self, path, cache_dir=None, img_size=224, augments=[]):
         self.path = path
+        if cache_dir is not None:
+            os.makedirs(cache_dir, exist_ok=True)
+            self.cache = True
+        else:
+            self.cache = False
         self.img_size = img_size
         self.augments = augments
         self.data = []
@@ -25,11 +33,19 @@ class SegmentationDataset(torch.utils.data.Dataset):
             os.path.join(label_dir,
                          os.path.splitext(name)[0] + '.png')
         ] for name in names if os.path.splitext(name)[1] in config.IMG_EXT]
+        if self.cache:
+            self.counts = [-1 for i in self.data]
+            self.cache_list = [
+                os.path.join(cache_dir, str(i)) for i in range(len(self.data))
+            ]
 
-    def __len__(self):
-        return len(self.data)
+    def refresh_cache(self, idx):
+        item = self.get_item(idx)
+        torch.save(item, self.cache_list[idx])
+        self.counts[idx] = 0
+        return item
 
-    def __getitem__(self, idx):
+    def get_item(self, idx):
         img = cv2.imread(self.data[idx][0])
         img = cv2.resize(img, (self.img_size, self.img_size))
         seg_color = cv2.imread(self.data[idx][1])
@@ -48,3 +64,20 @@ class SegmentationDataset(torch.utils.data.Dataset):
         for ci, c in enumerate(self.classes):
             seg[seg_args == ci, 1 if ci > 0 else 0] = 1
         return torch.FloatTensor(img), torch.FloatTensor(seg)
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        if self.cache == False:
+            return self.get_item(idx)
+        if self.counts[idx] < 0:
+            item = self.refresh_cache(idx)
+            return item
+        self.counts[idx] += 1
+        item = torch.load(self.cache_list[idx])
+        if self.counts[idx] > randint(3, 15):
+            t = Thread(target=self.refresh_cache, args=(idx))
+            t.setDaemon(True)
+            t.start()
+        return item

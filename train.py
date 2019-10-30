@@ -8,7 +8,6 @@ from utils import device
 from utils import augments
 from utils.loss import FocalBCELoss
 from utils.optim import AdaBoundW
-from utils.generators import CachedGenerator
 from tqdm import tqdm
 from test import test
 from torchsummary import summary
@@ -16,8 +15,8 @@ import random
 import argparse
 
 print(device)
-if torch.cuda.is_available():
-    torch.backends.cudnn.benchmark = True
+# if torch.cuda.is_available():
+#     torch.backends.cudnn.benchmark = True
 
 
 def train(data_dir,
@@ -31,8 +30,7 @@ def train(data_dir,
           num_workers=-1,
           augments_list=[],
           multi_scale=False):
-    if not os.path.exists('weights'):
-        os.mkdir('weights')
+    os.makedirs('weights', exist_ok=True)
     if multi_scale:
         img_size_min = max(img_size * 0.67 // 32, 1)
         img_size_max = max(img_size * 1.5 // 32, 1)
@@ -40,41 +38,42 @@ def train(data_dir,
     val_dir = os.path.join(data_dir, 'val.txt')
     train_data = SegmentationDataset(
         train_dir,
-        img_size,
+        'ttmp',
+        img_size=img_size,
         augments=augments_list + [
             augments.BGR2RGB(),
             augments.Normalize(),
             augments.NHWC2NCHW(),
         ]
     )
-    train_loader = CachedGenerator(DataLoader(
+    train_loader = DataLoader(
         train_data, 
         batch_size=batch_size,
         shuffle=True,
-        num_workers=min([os.cpu_count(), batch_size, 16]) if num_workers < 0 else num_workers,
-    ), 300)
+        num_workers=num_workers,
+    )
     val_data = SegmentationDataset(
         val_dir,
-        img_size,
+        'vtmp',
+        img_size=img_size,
         augments=[
             augments.BGR2RGB(),
             augments.Normalize(),
             augments.NHWC2NCHW(),
         ]
     )
-    val_loader = CachedGenerator(DataLoader(
+    val_loader = DataLoader(
         val_data, 
         batch_size=batch_size,
         shuffle=True,
-        num_workers=min([os.cpu_count(), batch_size, 16]) if num_workers < 0 else num_workers,
-    ), 300)
+        num_workers=num_workers,
+    )
     best_miou = 0
     best_loss = 1000
     epoch = 0
-    classes = train_loader.generator.dataset.classes
+    classes = train_loader.dataset.classes
     num_classes = len(classes)
     model = DeepLabV3Plus(num_classes)
-    # model = DeepLabV3PlusMini(num_classes)
     model = model.to(device)
     criterion = FocalBCELoss(alpha=0.25, gamma=2)
     optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
@@ -95,22 +94,23 @@ def train(data_dir,
         # train
         model.train()
         total_loss = 0
-        pbar = tqdm(range(len(train_loader)))
+        pbar = tqdm(enumerate(train_loader), total=len(train_loader))
         optimizer.zero_grad()
-        for idx in pbar:
-            inputs, targets = next(train_loader)
+        for idx, (inputs, targets) in pbar:
             batch_idx = idx + 1
             inputs = inputs.to(device)
             targets = targets.to(device)
             if multi_scale:
                 inputs = F.interpolate(inputs, size=img_size, mode='bilinear', align_corners=False)
                 targets = F.interpolate(targets, size=img_size, mode='bilinear', align_corners=False)
-            outputs = model(inputs)
-            outputs = outputs.softmax(1)
-            loss = criterion(outputs, targets)
+            pred_obj, pred_cls = model(inputs)
+            true_obj = targets[:, 0:1, :, :]
+            loss = criterion(pred_obj, true_obj)
+            true_cls = targets[:, 1:, :, :]
+            loss += criterion(pred_cls, true_cls)
             loss = loss.view(loss.size(0), -1).mean(1)
-            against_inputs.append(inputs[loss > loss.mean())
-            against_targets.append(targets[loss > loss.mean()])
+            against_inputs.append(inputs[loss > 2 * loss.mean()])
+            against_targets.append(targets[loss > 2 * loss.mean()])
             loss.mean().backward()
             total_loss += loss.mean().item()
             mem = torch.cuda.memory_cached() / 1E9 if torch.cuda.is_available() else 0  # (GB)
@@ -120,9 +120,11 @@ def train(data_dir,
                     batch_idx == len(train_loader):
                 optimizer.step()
                 optimizer.zero_grad()
+
                 # multi scale
                 if multi_scale:
                     img_size = random.randrange(img_size_min, img_size_max) * 32
+
                 # against inputs training
                 if len(against_inputs) == 0:
                     continue
@@ -133,13 +135,17 @@ def train(data_dir,
                     if inputs.size(0) < 2:
                         continue
                     targets = against_targets[ei:ei + batch_size]
-                    outputs = model(inputs)
-                    outputs = outputs.softmax(1)
-                    loss = criterion(outputs, targets)
+                    pred_obj, pred_cls = model(inputs)
+                    true_obj = targets[:, 0:1, :, :]
+                    loss = criterion(pred_obj, true_obj)
+                    pred_cls = pred_cls.softmax(1)
+                    true_cls = targets[:, 1:, :, :]
+                    loss += criterion(pred_cls, true_cls)
                     loss.mean().backward()
                 optimizer.step()
                 optimizer.zero_grad()
-                against_examples = []
+                against_inputs = []
+                against_targets = []
 
             torch.cuda.empty_cache()
         print('')
@@ -175,7 +181,7 @@ if __name__ == "__main__":
     parser.add_argument('--img-size', type=int, default=320)
     parser.add_argument('--batch-size', type=int, default=4)
     parser.add_argument('--accumulate', type=int, default=16)
-    parser.add_argument('--num-workers', type=int, default=-1)
+    parser.add_argument('--num-workers', type=int, default=0)
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--resume', action='store_true')
     parser.add_argument('--weights', type=str, default='weights/last.pt')

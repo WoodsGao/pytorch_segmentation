@@ -65,8 +65,16 @@ class DeepLabV3Plus(nn.Module):
             nn.Dropout(0.5),
             bn(64),
             relu,
-            nn.Conv2d(64, num_classes, 1),
+            nn.Conv2d(64, 1, 1),
         )
+        self.cls_conv = nn.Sequential(
+            ResBlock(64, 64),
+            nn.Dropout(0.5),
+            bn(64),
+            relu,
+            nn.Conv2d(64, num_classes - 1, 1),
+        )
+
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
@@ -101,6 +109,11 @@ class DeepLabV3Plus(nn.Module):
 
         x = torch.cat([x, feat2, self.aspp_pooling3(feat2)], 1)
         x = self.up_conv3(x)
+        cls_mask = self.cls_conv(x)
+        cls_mask = F.interpolate(cls_mask,
+                                 scale_factor=4,
+                                 mode='bilinear',
+                                 align_corners=True)
         x = F.interpolate(x,
                           scale_factor=2,
                           mode='bilinear',
@@ -112,7 +125,7 @@ class DeepLabV3Plus(nn.Module):
                           scale_factor=2,
                           mode='bilinear',
                           align_corners=True)
-        return x
+        return x.sigmoid(), cls_mask.softmax(1)
 
 
 class DeepLabV3PlusMini(nn.Module):

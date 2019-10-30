@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from utils.datasets import SegmentationDataset
 from utils import augments
 from utils.loss import FocalBCELoss
-from utils.generators import CachedGenerator
+from utils.dataloaders import FileQueueDataLoader
 from utils import device
 from tqdm import tqdm
 import argparse
@@ -14,7 +14,7 @@ import argparse
 def test(model, val_loader, criterion, obj_conf=0.5):
     model.eval()
     val_loss = 0
-    classes = val_loader.generator.dataset.classes
+    classes = val_loader.dataset.classes
     num_classes = len(classes)
     total_size = 0
     # true positive / intersection
@@ -22,16 +22,21 @@ def test(model, val_loader, criterion, obj_conf=0.5):
     fp = torch.zeros(num_classes)
     fn = torch.zeros(num_classes)
     with torch.no_grad():
-        pbar = tqdm(range(len(val_loader)))
-        for idx in pbar:
+        pbar = tqdm(enumerate(val_loader), total=len(val_loader))
+        for idx, (inputs, targets) in pbar:
             batch_idx = idx + 1
-            inputs, targets = next(val_loader)
             inputs = inputs.to(device)
             targets = targets.to(device)
-            outputs = model(inputs)
-            outputs = outputs.softmax(1)
-            val_loss = criterion(outputs, targets)
-            predicted = outputs.max(1)[1].view(-1)
+            pred_obj, pred_cls = model(inputs)
+            true_obj = targets[:, 0:1, :, :]
+            loss = criterion(pred_obj, true_obj)
+            true_cls = targets[:, 1:, :, :]
+            loss += criterion(pred_cls, true_cls)
+            val_loss = loss.mean().item()
+            predicted = torch.cat([pred_obj, pred_cls], 1)
+            predicted[:, 0, :, :][predicted[:, 0, :, :] > (1 - obj_conf)] = 1
+            predicted[:, 0, :, :][predicted[:, 0, :, :] < 1] = 0
+            predicted = predicted.max(1)[1].view(-1)
             targets = targets.max(1)[1].view(-1)
             eq = predicted.eq(targets)
             total_size += predicted.size(0)
@@ -55,7 +60,7 @@ def test(model, val_loader, criterion, obj_conf=0.5):
                (tp[c_i] + fp[c_i]), tp[c_i] /
                (tp[c_i] + fn[c_i]), tp[c_i] / (tp + fp + fn)[c_i]))
     val_loss /= len(val_loader)
-    return val_loss.item(), (tp / (tp + fp + fn)).mean().item()
+    return val_loss, (tp / (tp + fp + fn)).mean().item()
 
 
 if __name__ == "__main__":
@@ -64,27 +69,27 @@ if __name__ == "__main__":
     parser.add_argument('--img-size', type=int, default=224)
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--weight-path', type=str, default='weights/last.pt')
-    parser.add_argument('--num-workers', type=int, default=-1)
+    parser.add_argument('--num-workers', type=int, default=0)
 
     opt = parser.parse_args()
 
     criterion = FocalBCELoss(alpha=0.25, gamma=2)
     val_data = SegmentationDataset(
         opt.data_dir,
-        opt.img_size,
+        img_size=opt.img_size,
         augments=[
             augments.BGR2RGB(),
             augments.Normalize(),
             augments.NHWC2NCHW(),
         ]
     )
-    val_loader = CachedGenerator(DataLoader(
+    val_loader = DataLoader(
         val_data, 
         batch_size=opt.batch_size,
         shuffle=True,
-        num_workers=min([os.cpu_count(), opt.batch_size, 16]) if opt.num_workers < 0 else opt.num_workers,
-    ), 300)
-    classes = val_loader.generator.dataset.classes
+        num_workers=opt.num_workers,
+    )
+    classes = val_loader.dataset.classes
     num_classes = len(classes)
     model = DeepLabV3Plus(num_classes)
     model = model.to(device)
