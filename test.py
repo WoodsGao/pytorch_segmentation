@@ -1,16 +1,15 @@
 import torch
 from models import DeepLabV3Plus
-import os
 from torch.utils.data import DataLoader
 from utils.datasets import SegmentationDataset
 from utils import augments
-from utils.loss import FocalBCELoss
+from utils.losses import compute_loss
 from utils import device
 from tqdm import tqdm
 import argparse
 
 
-def test(model, val_loader, criterion, obj_conf=0.5):
+def test(model, val_loader, obj_conf=0.5):
     model.eval()
     val_loss = 0
     classes = val_loader.dataset.classes
@@ -26,11 +25,8 @@ def test(model, val_loader, criterion, obj_conf=0.5):
             batch_idx = idx + 1
             inputs = inputs.to(device)
             targets = targets.to(device)
-            pred_obj, pred_cls = model(inputs)
-            true_obj = targets[:, 0:1, :, :]
-            loss = criterion(pred_obj, true_obj)
-            true_cls = targets[:, 1:, :, :]
-            loss += criterion(pred_cls, true_cls)
+            outputs = model(inputs)
+            loss = compute_loss(outputs, targets)[0]
             val_loss += loss.mean().item()
             predicted = torch.cat([pred_obj, pred_cls], 1)
             predicted[:, 0, :, :][predicted[:, 0, :, :] > (1 - obj_conf)] = 1
@@ -72,7 +68,6 @@ if __name__ == "__main__":
 
     opt = parser.parse_args()
 
-    criterion = FocalBCELoss(alpha=0.25, gamma=2)
     val_data = SegmentationDataset(
         opt.data_dir,
         img_size=opt.img_size,
@@ -94,5 +89,5 @@ if __name__ == "__main__":
     model = model.to(device)
     # state_dict = torch.load(opt.weight_path, map_location=device)
     # model.load_state_dict(state_dict['model'])
-    val_loss, acc = test(model, val_loader, criterion)
+    val_loss, acc = test(model, val_loader)
     print('val_loss: %10g   acc: %10g' % (val_loss, acc))

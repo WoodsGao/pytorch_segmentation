@@ -58,12 +58,10 @@ class SegmentationDataset(torch.utils.data.Dataset):
         for aug in self.augments:
             img, _, seg = aug(img, seg=seg)
         seg[seg.sum(2) == 0, 0] = 1
-        seg[seg > 0.5] = 1
-        seg[seg < 1] = 0
-        seg_args = seg.argmax(2)
-        for ci, c in enumerate(self.classes):
-            seg[seg_args == ci, 1 if ci > 0 else 0] = 1
-        return torch.FloatTensor(img), torch.FloatTensor(seg)
+        seg_args = seg.argmax(0)
+        # for ci, c in enumerate(self.classes):
+        #     seg[seg_args == ci, 1 if ci > 0 else 0] = 1
+        return torch.FloatTensor(img), torch.LongTensor(seg_args)
 
     def __len__(self):
         return len(self.data)

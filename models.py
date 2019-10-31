@@ -125,7 +125,7 @@ class DeepLabV3Plus(nn.Module):
                           scale_factor=2,
                           mode='bilinear',
                           align_corners=True)
-        return x.sigmoid(), cls_mask.softmax(1)
+        return x.sigmoid(), cls_mask
 
 
 class DeepLabV3PlusMini(nn.Module):

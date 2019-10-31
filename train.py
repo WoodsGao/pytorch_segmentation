@@ -2,15 +2,15 @@ import torch
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from utils.datasets import SegmentationDataset
-from models import DeepLabV3Plus, DeepLabV3PlusMini
+from models import DeepLabV3Plus
 import os
 from utils import device
 from utils import augments
-from utils.loss import FocalBCELoss
-from utils.optim import AdaBoundW
+from utils.optims import AdaBoundW
+from utils.losses import compute_loss
 from tqdm import tqdm
 from test import test
-from torchsummary import summary
+# from torchsummary import summary
 import random
 import argparse
 
@@ -75,7 +75,6 @@ def train(data_dir,
     num_classes = len(classes)
     model = DeepLabV3Plus(num_classes)
     model = model.to(device)
-    criterion = FocalBCELoss(alpha=0.25, gamma=2)
     optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
     # summary(model, (3, img_size, img_size))
     if resume:
@@ -103,19 +102,16 @@ def train(data_dir,
             if multi_scale:
                 inputs = F.interpolate(inputs, size=img_size, mode='bilinear', align_corners=False)
                 targets = F.interpolate(targets, size=img_size, mode='bilinear', align_corners=False)
-            pred_obj, pred_cls = model(inputs)
-            true_obj = targets[:, 0:1, :, :]
-            loss = criterion(pred_obj, true_obj)
-            true_cls = targets[:, 1:, :, :]
-            loss += criterion(pred_cls, true_cls)
-            loss = loss.view(loss.size(0), -1).mean(1)
+            outputs = model(inputs)
+            loss, obj_loss, cls_loss = compute_loss(outputs, targets)
             against_inputs.append(inputs[loss > 2 * loss.mean()])
             against_targets.append(targets[loss > 2 * loss.mean()])
-            loss.mean().backward()
-            total_loss += loss.mean().item()
+            loss = loss.mean()
+            loss.backward()
+            total_loss += loss.item()
             mem = torch.cuda.memory_cached() / 1E9 if torch.cuda.is_available() else 0  # (GB)
-            pbar.set_description('train mem: %5.2lfGB loss: %10lf scale: %4d' %
-                                 (mem, total_loss / batch_idx, inputs.size(2)))
+            pbar.set_description('train mem: %5.2lfGB obj_loss: %8lf cls_loss: %8f scale: %4d' %
+                                 (mem, obj_loss.mean(), cls_loss.mean(), inputs.size(2)))
             if batch_idx % accumulate == 0 or \
                     batch_idx == len(train_loader):
                 optimizer.step()
@@ -135,12 +131,8 @@ def train(data_dir,
                     if inputs.size(0) < 2:
                         continue
                     targets = against_targets[ei:ei + batch_size]
-                    pred_obj, pred_cls = model(inputs)
-                    true_obj = targets[:, 0:1, :, :]
-                    loss = criterion(pred_obj, true_obj)
-                    pred_cls = pred_cls.softmax(1)
-                    true_cls = targets[:, 1:, :, :]
-                    loss += criterion(pred_cls, true_cls)
+                    outputs = model(inputs)
+                    loss = compute_loss(outputs, targets)[0]
                     loss.mean().backward()
                 optimizer.step()
                 optimizer.zero_grad()
@@ -150,7 +142,7 @@ def train(data_dir,
             torch.cuda.empty_cache()
         print('')
         # validate
-        val_loss, miou = test(model, val_loader, criterion, )
+        val_loss, miou = test(model, val_loader, )
         # Save checkpoint.
         state_dict = {
             'model': model.state_dict(),
