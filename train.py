@@ -94,6 +94,8 @@ def train(data_dir,
         # train
         model.train()
         total_loss = 0
+        total_obj_loss = 0
+        total_cls_loss = 0
         pbar = tqdm(enumerate(train_loader), total=len(train_loader) if train_iters == 0 else train_iters)
         optimizer.zero_grad()
         for idx, (inputs, targets) in pbar:
@@ -118,12 +120,15 @@ def train(data_dir,
             against_targets.append(targets[loss > 2 * loss.mean()])
             loss = loss.mean()
             loss.backward()
+            against_inputs
+            total_obj_loss += obj_loss.mean().item()
+            total_cls_loss += cls_loss.mean().item()
             total_loss += loss.item()
             mem = torch.cuda.memory_cached() / 1E9 if torch.cuda.is_available(
             ) else 0  # (GB)
             pbar.set_description(
                 'train mem: %5.2lfGB obj_loss: %8lf cls_loss: %8f scale: %4d' %
-                (mem, obj_loss.mean(), cls_loss.mean(), inputs.size(2)))
+                (mem, total_obj_loss / batch_idx, total_cls_loss / batch_idx, inputs.size(2)))
             if batch_idx % accumulate == 0 or \
                     batch_idx == len(train_loader):
                 optimizer.step()
