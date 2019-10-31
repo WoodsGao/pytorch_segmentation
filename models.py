@@ -42,15 +42,21 @@ class DeepLabV3Plus(nn.Module):
         self.low_conv = BLD(64, 512, 1)
         self.middle_conv = BLD(128, 512, 1)
         self.obj_conv = nn.Sequential(
-            bn(1024),
+            ResBlock(1024, 256),
+            ResBlock(256,512),
+            bn(512),
             relu,
-            nn.Conv2d(1024, 1, 3, padding=1),
+            nn.Conv2d(512, 1, 3, padding=1),
+        )
+        self.pre_cls_conv = nn.Sequential(
+            ResBlock(1024, 256), 
+            ResBlock(256, 512)
         )
         self.cls_conv = nn.Sequential(
             # nn.Dropout(0.1),
-            bn(1024),
+            bn(512),
             relu,
-            nn.Conv2d(1024, num_classes - 1, 3, padding=1),
+            nn.Conv2d(512, num_classes - 1, 3, padding=1),
         )
 
         for m in self.modules():
@@ -77,16 +83,17 @@ class DeepLabV3Plus(nn.Module):
                                  mode='bilinear',
                                  align_corners=True)
         cls_mask = torch.cat([cls_mask, middle], 1)
+        cls_mask = self.pre_cls_conv(cls_mask)
+        obj_mask = F.interpolate(cls_mask,
+                                 scale_factor=2,
+                                 mode='bilinear',
+                                 align_corners=True)
         cls_mask = self.cls_conv(cls_mask)
         cls_mask = F.interpolate(cls_mask,
                                  scale_factor=4,
                                  mode='bilinear',
                                  align_corners=True)
 
-        obj_mask = F.interpolate(x,
-                                 scale_factor=4,
-                                 mode='bilinear',
-                                 align_corners=True)
         obj_mask = torch.cat([obj_mask, low], 1)
         obj_mask = self.obj_conv(obj_mask)
         obj_mask = F.interpolate(obj_mask,
