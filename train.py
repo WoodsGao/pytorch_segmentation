@@ -28,7 +28,9 @@ def train(data_dir,
           resume=False,
           weights='',
           cache_len=3000,
-          num_workers=-1,
+          num_workers=0,
+          train_iters=0, 
+          test_iters=0,
           augments_list=[],
           multi_scale=False):
     os.makedirs('weights', exist_ok=True)
@@ -37,34 +39,30 @@ def train(data_dir,
         img_size_max = max(img_size * 1.5 // 32, 1)
     train_dir = os.path.join(data_dir, 'train.txt')
     val_dir = os.path.join(data_dir, 'val.txt')
-    train_data = SegmentationDataset(
-        train_dir,
-        'ttmp',
-        cache_len=3000,
-        img_size=img_size,
-        augments=augments_list + [
-            augments.BGR2RGB(),
-            augments.Normalize(),
-            augments.NHWC2NCHW(),
-        ]
-    )
+    train_data = SegmentationDataset(train_dir,
+                                     'ttmp',
+                                     cache_len=3000,
+                                     img_size=img_size,
+                                     augments=augments_list + [
+                                         augments.BGR2RGB(),
+                                         augments.Normalize(),
+                                         augments.NHWC2NCHW(),
+                                     ])
     train_loader = DataLoader(
         train_data,
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
     )
-    val_data = SegmentationDataset(
-        val_dir,
-        'vtmp',
-        cache_len=3000,
-        img_size=img_size,
-        augments=[
-            augments.BGR2RGB(),
-            augments.Normalize(),
-            augments.NHWC2NCHW(),
-        ]
-    )
+    val_data = SegmentationDataset(val_dir,
+                                   'vtmp',
+                                   cache_len=3000,
+                                   img_size=img_size,
+                                   augments=[
+                                       augments.BGR2RGB(),
+                                       augments.Normalize(),
+                                       augments.NHWC2NCHW(),
+                                   ])
     val_loader = DataLoader(
         val_data,
         batch_size=batch_size,
@@ -96,14 +94,21 @@ def train(data_dir,
         # train
         model.train()
         total_loss = 0
-        pbar = tqdm(enumerate(train_loader), total=len(train_loader))
+        pbar = tqdm(enumerate(train_loader), total=len(train_loader) if train_iters == 0 else train_iters)
         optimizer.zero_grad()
         for idx, (inputs, targets) in pbar:
             batch_idx = idx + 1
             if multi_scale:
-                inputs = F.interpolate(inputs, size=img_size, mode='bilinear', align_corners=False)
-                targets = F.one_hot(targets, num_classes).permute(0, 3, 1, 2).float()
-                targets = F.interpolate(targets, size=img_size, mode='bilinear', align_corners=False)
+                inputs = F.interpolate(inputs,
+                                       size=img_size,
+                                       mode='bilinear',
+                                       align_corners=False)
+                targets = F.one_hot(targets, num_classes).permute(0, 3, 1,
+                                                                  2).float()
+                targets = F.interpolate(targets,
+                                        size=img_size,
+                                        mode='bilinear',
+                                        align_corners=False)
                 targets = targets.max(1)[1]
             inputs = inputs.to(device)
             targets = targets.to(device)
@@ -114,9 +119,11 @@ def train(data_dir,
             loss = loss.mean()
             loss.backward()
             total_loss += loss.item()
-            mem = torch.cuda.memory_cached() / 1E9 if torch.cuda.is_available() else 0  # (GB)
-            pbar.set_description('train mem: %5.2lfGB obj_loss: %8lf cls_loss: %8f scale: %4d' %
-                                 (mem, obj_loss.mean(), cls_loss.mean(), inputs.size(2)))
+            mem = torch.cuda.memory_cached() / 1E9 if torch.cuda.is_available(
+            ) else 0  # (GB)
+            pbar.set_description(
+                'train mem: %5.2lfGB obj_loss: %8lf cls_loss: %8f scale: %4d' %
+                (mem, obj_loss.mean(), cls_loss.mean(), inputs.size(2)))
             if batch_idx % accumulate == 0 or \
                     batch_idx == len(train_loader):
                 optimizer.step()
@@ -124,7 +131,8 @@ def train(data_dir,
 
                 # multi scale
                 if multi_scale:
-                    img_size = random.randrange(img_size_min, img_size_max) * 32
+                    img_size = random.randrange(img_size_min,
+                                                img_size_max) * 32
 
                 # against inputs training
                 if len(against_inputs) == 0:
@@ -147,7 +155,11 @@ def train(data_dir,
             torch.cuda.empty_cache()
         print('')
         # validate
-        val_loss, miou = test(model, val_loader, )
+        val_loss, miou = test(
+            model,
+            val_loader,
+            test_iters=test_iters,
+        )
         # Save checkpoint.
         state_dict = {
             'model': model.state_dict(),
@@ -179,6 +191,8 @@ if __name__ == "__main__":
     parser.add_argument('--batch-size', type=int, default=4)
     parser.add_argument('--accumulate', type=int, default=16)
     parser.add_argument('--num-workers', type=int, default=0)
+    parser.add_argument('--train_iters', type=int, default=0)
+    parser.add_argument('--test_iters', type=int, default=0)
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--resume', action='store_true')
     parser.add_argument('--weights', type=str, default='weights/last.pt')
@@ -204,5 +218,7 @@ if __name__ == "__main__":
           resume=opt.resume,
           weights=opt.weights,
           num_workers=opt.num_workers,
+          train_iters=opt.train_iters,
+          test_iters=opt.test_iters,
           augments_list=augments_list,
           multi_scale=opt.multi_scale)

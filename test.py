@@ -9,7 +9,7 @@ from tqdm import tqdm
 import argparse
 
 
-def test(model, val_loader, obj_conf=0.5):
+def test(model, val_loader, obj_conf=0.5, test_iters=0):
     model.eval()
     val_loss = 0
     classes = val_loader.dataset.classes
@@ -20,7 +20,7 @@ def test(model, val_loader, obj_conf=0.5):
     fp = torch.zeros(num_classes)
     fn = torch.zeros(num_classes)
     with torch.no_grad():
-        pbar = tqdm(enumerate(val_loader), total=len(val_loader))
+        pbar = tqdm(enumerate(val_loader), total=len(val_loader) if test_iters == 0 else test_iters)
         for idx, (inputs, targets) in pbar:
             batch_idx = idx + 1
             inputs = inputs.to(device)
