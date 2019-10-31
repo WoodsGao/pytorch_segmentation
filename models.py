@@ -26,8 +26,10 @@ class DeepLabV3Plus(nn.Module):
             ResBlock(256, 256),
             ResBlock(256, 256, dilation=18),
             ResBlock(256, 256),
-            ResBlock(256, 256, dilation=30),
-            ResBlock(256, 512),
+        )
+        self.block4 = nn.Sequential(
+            ResBlock(256, 512, stride=2),
+            ResBlock(512, 512),
             ResBlock(512, 512, dilation=6),
             ResBlock(512, 512),
             ResBlock(512, 512, dilation=12),
@@ -37,67 +39,75 @@ class DeepLabV3Plus(nn.Module):
             ResBlock(512, 512, dilation=30),
             ResBlock(512, 512),
         )
-        self.aspp_pooling = AsppPooling(512, 512)
-        self.up_conv = BLD(1024, 512, 1)
-        self.low_conv = BLD(64, 512, 1)
-        self.middle_conv = BLD(128, 512, 1)
-        self.obj_conv = nn.Sequential(
-            ResBlock(1024, 256),
-            ResBlock(256,512),
-            bn(512),
-            relu,
-            nn.Conv2d(512, 1, 3, padding=1),
-        )
-        self.pre_cls_conv = nn.Sequential(
-            ResBlock(1024, 256), 
-            ResBlock(256, 512)
-        )
-        self.cls_conv = nn.Sequential(
-            # nn.Dropout(0.1),
-            bn(512),
-            relu,
-            nn.Conv2d(512, num_classes - 1, 3, padding=1),
+        self.block5 = nn.Sequential(
+            ResBlock(512, 1024, stride=2),
+            ResBlock(1024, 1024),
+            ResBlock(1024, 1024, dilation=6),
+            ResBlock(1024, 1024, dilation=12),
+            ResBlock(1024, 1024, dilation=18),
+            ResBlock(1024, 1024),
         )
 
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                m.weight.data.normal_(0, math.sqrt(2. / n))
-            elif isinstance(m, nn.BatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
+        self.high_level_block = nn.Sequential(
+            ResBlock(1024, 1024),
+            ResBlock(1024, 1024, dilation=6),
+            ResBlock(1024, 1024),
+        )
+        self.high2middle = nn.Sequential(ResBlock(1024, 512),
+                                         ResBlock(512, 256))
+        self.middle_level_block = nn.Sequential(
+            ResBlock(256, 256),
+            ResBlock(256, 256, dilation=6),
+            ResBlock(256, 256),
+        )
+        self.cls_conv = nn.Sequential(ResBlock(256, 256), bn(256), relu,
+                                      nn.Conv2d(256, num_classes - 1, 1))
 
-    def forward(self, x):
+        self.middle2low = nn.Sequential(ResBlock(256, 128), )
+        self.low_level_block = nn.Sequential(
+            ResBlock(128, 128),
+            ResBlock(128, 128, dilation=6),
+            ResBlock(128, 128),
+        )
+        self.obj_conv = nn.Sequential(ResBlock(128, 128), bn(128), relu,
+                                      nn.Conv2d(128, 1, 1))
+
+    def forward(self, x, var=None):
         x = self.conv1(x)
         x = self.block1(x)
-        low = self.low_conv(x)
         x = self.block2(x)
-        middle = self.middle_conv(x)
+        low_level_feat = x
         x = self.block3(x)
-
-        x = torch.cat([x, self.aspp_pooling(x)], 1)
-        x = self.up_conv(x)
-
-        cls_mask = F.interpolate(x,
-                                 scale_factor=2,
-                                 mode='bilinear',
-                                 align_corners=True)
-        cls_mask = torch.cat([cls_mask, middle], 1)
-        cls_mask = self.pre_cls_conv(cls_mask)
-        obj_mask = F.interpolate(cls_mask,
-                                 scale_factor=2,
-                                 mode='bilinear',
-                                 align_corners=True)
-        cls_mask = self.cls_conv(cls_mask)
+        middle_level_feat = x
+        x = self.block4(x)
+        x = self.block5(x)
+        high_level_feat = x + F.adaptive_avg_pool2d(x, (1, 1))
+        high_level_feat = self.high_level_block(high_level_feat)
+        high_level_feat = self.high2middle(high_level_feat)
+        high_level_feat = F.interpolate(high_level_feat,
+                                        scale_factor=4,
+                                        mode='bilinear',
+                                        align_corners=True)
+        middle_level_feat = middle_level_feat + high_level_feat
+        middle_level_feat = self.middle_level_block(middle_level_feat)
+        cls_mask = self.cls_conv(middle_level_feat)
         cls_mask = F.interpolate(cls_mask,
-                                 scale_factor=4,
+                                 scale_factor=8,
                                  mode='bilinear',
                                  align_corners=True)
 
-        obj_mask = torch.cat([obj_mask, low], 1)
-        obj_mask = self.obj_conv(obj_mask)
+        low_level_feat = low_level_feat + F.adaptive_avg_pool2d(
+            low_level_feat, (1, 1))
+        middle_level_feat = self.middle2low(middle_level_feat)
+        middle_level_feat = F.interpolate(middle_level_feat,
+                                          scale_factor=2,
+                                          mode='bilinear',
+                                          align_corners=True)
+        low_level_feat = low_level_feat + middle_level_feat
+        low_level_feat = self.low_level_block(low_level_feat)
+        obj_mask = self.obj_conv(low_level_feat)
         obj_mask = F.interpolate(obj_mask,
-                                 scale_factor=2,
+                                 scale_factor=4,
                                  mode='bilinear',
                                  align_corners=True)
         return obj_mask.sigmoid(), cls_mask
