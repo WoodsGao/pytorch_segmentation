@@ -9,7 +9,7 @@ from tqdm import tqdm
 import argparse
 
 
-def test(model, val_loader, obj_conf=0.5, test_iters=0):
+def test(model, val_loader, obj_conf=0.5):
     model.eval()
     val_loss = 0
     classes = val_loader.dataset.classes
@@ -20,7 +20,7 @@ def test(model, val_loader, obj_conf=0.5, test_iters=0):
     fp = torch.zeros(num_classes)
     fn = torch.zeros(num_classes)
     with torch.no_grad():
-        pbar = tqdm(enumerate(val_loader), total=len(val_loader) if test_iters <= 0 else test_iters)
+        pbar = tqdm(enumerate(val_loader), total=len(val_loader))
         for idx, (inputs, targets) in pbar:
             batch_idx = idx + 1
             inputs = inputs.to(device)
@@ -52,8 +52,6 @@ def test(model, val_loader, obj_conf=0.5, test_iters=0):
             pbar.set_description('loss: %10lf, miou: %10lf' %
                                  (val_loss / batch_idx,
                                   (tp / union).mean()))
-            if test_iters > 0 and batch_idx == test_iters:
-                break
     print('')
     for c_i, c in enumerate(classes):
         print('cls: %10s, targets: %10d, pre: %10lf, rec: %10lf, iou: %10lf' %
@@ -71,7 +69,6 @@ if __name__ == "__main__":
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--weights', type=str, default='')
     parser.add_argument('--num-workers', type=int, default=0)
-    parser.add_argument('--test-iters', type=int, default=0)
 
     opt = parser.parse_args()
 
@@ -97,5 +94,5 @@ if __name__ == "__main__":
     if opt.weights:
         state_dict = torch.load(opt.weights, map_location=device)
         model.load_state_dict(state_dict['model'])
-    val_loss, acc = test(model, val_loader, test_iters=opt.test_iters)
+    val_loss, acc = test(model, val_loader)
     print('val_loss: %10g   acc: %10g' % (val_loss, acc))

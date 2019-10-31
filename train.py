@@ -29,10 +29,9 @@ def train(data_dir,
           weights='',
           cache_len=3000,
           num_workers=0,
-          train_iters=0, 
-          test_iters=0,
           augments_list=[],
-          multi_scale=False):
+          multi_scale=False,
+          no_test=False):
     os.makedirs('weights', exist_ok=True)
     if multi_scale:
         img_size_min = max(img_size * 0.67 // 32, 1)
@@ -96,7 +95,7 @@ def train(data_dir,
         total_loss = 0
         total_obj_loss = 0
         total_cls_loss = 0
-        pbar = tqdm(enumerate(train_loader), total=len(train_loader) if train_iters == 0 else train_iters)
+        pbar = tqdm(enumerate(train_loader), total=len(train_loader))
         optimizer.zero_grad()
         for idx, (inputs, targets) in pbar:
             batch_idx = idx + 1
@@ -160,15 +159,13 @@ def train(data_dir,
                 against_targets = []
 
             torch.cuda.empty_cache()
-            if train_iters > 0 and batch_idx == train_iters:
-                break
         print('')
         # validate
-        val_loss, miou = test(
-            model,
-            val_loader,
-            test_iters=test_iters,
-        )
+        if not no_test:
+            val_loss, miou = test(
+                model,
+                val_loader,
+            )
         # Save checkpoint.
         state_dict = {
             'model': model.state_dict(),
@@ -200,10 +197,9 @@ if __name__ == "__main__":
     parser.add_argument('--batch-size', type=int, default=4)
     parser.add_argument('--accumulate', type=int, default=16)
     parser.add_argument('--num-workers', type=int, default=0)
-    parser.add_argument('--train-iters', type=int, default=0)
-    parser.add_argument('--test-iters', type=int, default=0)
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--resume', action='store_true')
+    parser.add_argument('--no-test', action='store_true')
     parser.add_argument('--weights', type=str, default='weights/last.pt')
     parser.add_argument('--multi-scale', action='store_true')
     augments_list = [
@@ -227,7 +223,6 @@ if __name__ == "__main__":
           resume=opt.resume,
           weights=opt.weights,
           num_workers=opt.num_workers,
-          train_iters=opt.train_iters,
-          test_iters=opt.test_iters,
           augments_list=augments_list,
-          multi_scale=opt.multi_scale)
+          multi_scale=opt.multi_scale, 
+          no_test=opt.no_test)
