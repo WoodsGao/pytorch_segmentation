@@ -1,7 +1,7 @@
 import torch
 from models import DeepLabV3Plus
 from torch.utils.data import DataLoader
-from utils.datasets import SegmentationDataset
+from utils.datasets import SegmentationDataset, show_batch
 from utils import augments
 from utils.losses import compute_loss
 from utils import device
@@ -31,7 +31,10 @@ def test(model, val_loader, obj_conf=0.5, test_iters=0):
             predicted = torch.cat([outputs[0], outputs[1].softmax(1)], 1)
             predicted[:, 0, :, :][predicted[:, 0, :, :] > obj_conf] = 1
             predicted[:, 0, :, :][predicted[:, 0, :, :] < 1] = 0
-            predicted = predicted.max(1)[1].view(-1)
+            predicted = predicted.max(1)[1]
+            if idx == 0:
+                show_batch('test_batch.png', inputs.cpu(), predicted.cpu(), classes)
+            predicted = predicted.view(-1)
             targets = targets.view(-1)
             eq = predicted.eq(targets)
             total_size += predicted.size(0)

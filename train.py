@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
-from utils.datasets import SegmentationDataset
+from utils.datasets import SegmentationDataset, show_batch
 from models import DeepLabV3Plus
 import os
 from utils import device
@@ -112,6 +112,8 @@ def train(data_dir,
                                         mode='bilinear',
                                         align_corners=False)
                 targets = targets.max(1)[1]
+            if idx == 0 and epoch == 0:
+                show_batch('train_batch.png', inputs, targets, classes)
             inputs = inputs.to(device)
             targets = targets.to(device)
             outputs = model(inputs)

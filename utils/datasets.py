@@ -9,7 +9,12 @@ from . import config
 
 
 class SegmentationDataset(torch.utils.data.Dataset):
-    def __init__(self, path, cache_dir=None, cache_len=3000, img_size=224, augments=[]):
+    def __init__(self,
+                 path,
+                 cache_dir=None,
+                 cache_len=3000,
+                 img_size=224,
+                 augments=[]):
         self.path = path
         if cache_dir is not None:
             os.makedirs(cache_dir, exist_ok=True)
@@ -87,3 +92,28 @@ class SegmentationDataset(torch.utils.data.Dataset):
             t.setDaemon(True)
             t.start()
         return item
+
+
+def show_batch(save_path, inputs, targets, classes):
+    imgs = []
+    segs = []
+    for bi, (img, seg) in enumerate(zip(inputs, targets)):
+        img -= img.min()
+        img /= img.max() / 255.
+        img.clamp(0, 255)
+        img = img.long().numpy().transpose(1, 2, 0)
+        seg = seg.numpy()
+        seg_rgb = np.zeros_like(img, dtype=np.uint8)
+        for ci, (cn, color) in enumerate(classes):
+            seg_rgb[seg == ci] = color
+
+        img = img[:, :, ::-1]
+
+        imgs.append(img)
+        segs.append(seg_rgb)
+
+    imgs = np.concatenate(imgs, 1)
+    segs = np.concatenate(segs, 1)
+
+    save_img = np.concatenate([imgs, segs], 0)
+    cv2.imwrite(save_path, save_img)
