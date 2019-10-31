@@ -100,11 +100,13 @@ def train(data_dir,
         optimizer.zero_grad()
         for idx, (inputs, targets) in pbar:
             batch_idx = idx + 1
-            inputs = inputs.to(device)
-            targets = targets.to(device)
             if multi_scale:
                 inputs = F.interpolate(inputs, size=img_size, mode='bilinear', align_corners=False)
+                targets = F.one_hot(targets, num_classes).permute(0, 3, 1, 2).float()
                 targets = F.interpolate(targets, size=img_size, mode='bilinear', align_corners=False)
+                targets = targets.max(1)[1]
+            inputs = inputs.to(device)
+            targets = targets.to(device)
             outputs = model(inputs)
             loss, obj_loss, cls_loss = compute_loss(outputs, targets)
             against_inputs.append(inputs[loss > 2 * loss.mean()])

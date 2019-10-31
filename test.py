@@ -28,11 +28,11 @@ def test(model, val_loader, obj_conf=0.5):
             outputs = model(inputs)
             loss = compute_loss(outputs, targets)[0]
             val_loss += loss.mean().item()
-            predicted = torch.cat([pred_obj, pred_cls], 1)
-            predicted[:, 0, :, :][predicted[:, 0, :, :] > (1 - obj_conf)] = 1
+            predicted = torch.cat([outputs[0], outputs[1].softmax(1)], 1)
+            predicted[:, 0, :, :][predicted[:, 0, :, :] > obj_conf] = 1
             predicted[:, 0, :, :][predicted[:, 0, :, :] < 1] = 0
             predicted = predicted.max(1)[1].view(-1)
-            targets = targets.max(1)[1].view(-1)
+            targets = targets.view(-1)
             eq = predicted.eq(targets)
             total_size += predicted.size(0)
             for c_i, c in enumerate(classes):
