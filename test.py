@@ -44,18 +44,19 @@ def test(model, val_loader, obj_conf=0.5, test_iters=0):
                 tp[c_i] += tpi
                 fn[c_i] += fni
                 fp[c_i] += fpi
-
+            union = tp + fp + fn
+            union[union <= 0] = 1
             pbar.set_description('loss: %10lf, miou: %10lf' %
                                  (val_loss / batch_idx,
-                                  (tp / (tp + fp + fn)).mean()))
+                                  (tp / union).mean()))
     print('')
     for c_i, c in enumerate(classes):
         print('cls: %10s, targets: %10d, pre: %10lf, rec: %10lf, iou: %10lf' %
               (c[0], tp[c_i] + fn[c_i], tp[c_i] /
                (tp[c_i] + fp[c_i]), tp[c_i] /
-               (tp[c_i] + fn[c_i]), tp[c_i] / (tp + fp + fn)[c_i]))
+               (tp[c_i] + fn[c_i]), tp[c_i] / union[c_i]))
     val_loss /= len(val_loader)
-    return val_loss, (tp / (tp + fp + fn)).mean().item()
+    return val_loss, (tp / union).mean().item()
 
 
 if __name__ == "__main__":
