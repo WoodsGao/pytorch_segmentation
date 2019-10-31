@@ -153,6 +153,8 @@ def train(data_dir,
                 against_targets = []
 
             torch.cuda.empty_cache()
+            if train_iters > 0 and batch_idx == train_iters:
+                break
         print('')
         # validate
         val_loss, miou = test(
