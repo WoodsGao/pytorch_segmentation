@@ -27,6 +27,7 @@ def train(data_dir,
           lr=1e-3,
           resume=False,
           weights='',
+          cache_len=3000,
           num_workers=-1,
           augments_list=[],
           multi_scale=False):
@@ -39,6 +40,7 @@ def train(data_dir,
     train_data = SegmentationDataset(
         train_dir,
         'ttmp',
+        cache_len=3000,
         img_size=img_size,
         augments=augments_list + [
             augments.BGR2RGB(),
@@ -55,6 +57,7 @@ def train(data_dir,
     val_data = SegmentationDataset(
         val_dir,
         'vtmp',
+        cache_len=3000,
         img_size=img_size,
         augments=[
             augments.BGR2RGB(),
