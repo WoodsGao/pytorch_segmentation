@@ -69,7 +69,7 @@ if __name__ == "__main__":
     parser.add_argument('--data-dir', type=str, default='data/voc/val.txt')
     parser.add_argument('--img-size', type=int, default=224)
     parser.add_argument('--batch-size', type=int, default=32)
-    parser.add_argument('--weight-path', type=str, default='weights/last.pt')
+    parser.add_argument('--weights', type=str, default='')
     parser.add_argument('--num-workers', type=int, default=0)
     parser.add_argument('--test-iters', type=int, default=0)
 
@@ -94,7 +94,8 @@ if __name__ == "__main__":
     num_classes = len(classes)
     model = DeepLabV3Plus(num_classes)
     model = model.to(device)
-    # state_dict = torch.load(opt.weight_path, map_location=device)
-    # model.load_state_dict(state_dict['model'])
+    if opt.weights:
+        state_dict = torch.load(opt.weights, map_location=device)
+        model.load_state_dict(state_dict['model'])
     val_loss, acc = test(model, val_loader, test_iters=opt.test_iters)
     print('val_loss: %10g   acc: %10g' % (val_loss, acc))
