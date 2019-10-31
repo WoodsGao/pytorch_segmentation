@@ -1,7 +1,7 @@
 import math
 import torch
 import torch.nn as nn
-import torch.optim as optim
+from . import device
 
 
 class FocalBCELoss(nn.Module):
@@ -26,3 +26,23 @@ class FocalBCELoss(nn.Module):
             (1 - a) * torch.pow(y_pred, g) * (1 - y_true) * torch.log(1 - y_pred)
         loss *= self.weight
         return loss.mean(1)
+
+
+FOCAL = FocalBCELoss()
+CE = nn.CrossEntropyLoss(reduction='none', ignore_index=-1)
+BCE = nn.BCELoss(reduction='none')
+
+
+def compute_loss(outputs, targets, obj_weight=1, cls_weight=1):
+    pred_obj, pred_cls = outputs
+    true_obj = targets
+    true_obj[true_obj > 0] = -1
+    true_obj += 1
+    true_obj = true_obj.unsqueeze(1)
+    obj_loss = FOCAL(pred_obj, true_obj)
+    obj_loss = obj_loss.view(obj_loss.size(0), -1).mean(1) * obj_weight
+    true_cls = targets - 1
+    cls_loss = CE(pred_cls, true_cls)
+    cls_loss = cls_loss.view(cls_loss.size(0), -1).mean(1) * cls_weight
+    loss = obj_loss + cls_loss
+    return loss, obj_loss, cls_loss
