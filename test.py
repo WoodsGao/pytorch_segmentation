@@ -20,7 +20,7 @@ def test(model, val_loader, obj_conf=0.5, test_iters=0):
     fp = torch.zeros(num_classes)
     fn = torch.zeros(num_classes)
     with torch.no_grad():
-        pbar = tqdm(enumerate(val_loader), total=len(val_loader) if test_iters == 0 else test_iters)
+        pbar = tqdm(enumerate(val_loader), total=len(val_loader) if test_iters <= 0 else test_iters)
         for idx, (inputs, targets) in pbar:
             batch_idx = idx + 1
             inputs = inputs.to(device)
@@ -29,10 +29,13 @@ def test(model, val_loader, obj_conf=0.5, test_iters=0):
             loss = compute_loss(outputs, targets)[0]
             val_loss += loss.mean().item()
             predicted = torch.cat([outputs[0], outputs[1].softmax(1)], 1)
+            print(predicted.size())
             predicted[:, 0, :, :][predicted[:, 0, :, :] > obj_conf] = 1
             predicted[:, 0, :, :][predicted[:, 0, :, :] < 1] = 0
             predicted = predicted.max(1)[1].view(-1)
+            print(torch.unique(predicted))
             targets = targets.view(-1)
+            print(torch.unique(targets))
             eq = predicted.eq(targets)
             total_size += predicted.size(0)
             for c_i, c in enumerate(classes):
@@ -49,6 +52,8 @@ def test(model, val_loader, obj_conf=0.5, test_iters=0):
             pbar.set_description('loss: %10lf, miou: %10lf' %
                                  (val_loss / batch_idx,
                                   (tp / union).mean()))
+            if test_iters > 0 and batch_idx == test_iters:
+                break
     print('')
     for c_i, c in enumerate(classes):
         print('cls: %10s, targets: %10d, pre: %10lf, rec: %10lf, iou: %10lf' %
@@ -66,6 +71,7 @@ if __name__ == "__main__":
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--weight-path', type=str, default='weights/last.pt')
     parser.add_argument('--num-workers', type=int, default=0)
+    parser.add_argument('--test-iters', type=int, default=0)
 
     opt = parser.parse_args()
 
@@ -90,5 +96,5 @@ if __name__ == "__main__":
     model = model.to(device)
     # state_dict = torch.load(opt.weight_path, map_location=device)
     # model.load_state_dict(state_dict['model'])
-    val_loss, acc = test(model, val_loader)
+    val_loss, acc = test(model, val_loader, test_iters=opt.test_iters)
     print('val_loss: %10g   acc: %10g' % (val_loss, acc))

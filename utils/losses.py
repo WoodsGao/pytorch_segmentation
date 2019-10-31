@@ -35,9 +35,8 @@ BCE = nn.BCELoss(reduction='none')
 
 def compute_loss(outputs, targets, obj_weight=1, cls_weight=1):
     pred_obj, pred_cls = outputs
-    true_obj = targets
-    true_obj[true_obj > 0] = -1
-    true_obj += 1
+    true_obj = targets + 1
+    true_obj[true_obj > 1] = 0
     true_obj = true_obj.unsqueeze(1)
     obj_loss = FOCAL(pred_obj, true_obj)
     obj_loss = obj_loss.view(obj_loss.size(0), -1).mean(1) * obj_weight
