@@ -9,34 +9,16 @@ class DeepLabV3Plus(nn.Module):
     def __init__(self, num_classes):
         super(DeepLabV3Plus, self).__init__()
         # full pre-activation
+        # full pre-activation
         self.conv1 = nn.Conv2d(3, 32, 7, 1, 3)
-        self.block1 = nn.Sequential(
-            ResBlock(32, 64, stride=2),
-            ResBlock(64, 64),
-            ResBlock(64, 64, dilation=6),
-            ResBlock(64, 64),
-        )
+        self.block1 = nn.Sequential(ResBlock(32, 64, stride=2))
         self.block2 = nn.Sequential(
-            ResBlock(64, 64, stride=2),
-            ResBlock(64, 64),
-            ResBlock(64, 64, dilation=6),
-            ResBlock(64, 64),
-            ResBlock(64, 64, dilation=12),
-            ResBlock(64, 64),
-        )
-        self.block3 = nn.Sequential(
             ResBlock(64, 128, stride=2),
             ResBlock(128, 128),
             ResBlock(128, 128, dilation=6),
             ResBlock(128, 128),
-            ResBlock(128, 128, dilation=12),
-            ResBlock(128, 128),
-            ResBlock(128, 128, dilation=18),
-            ResBlock(128, 128),
-            ResBlock(128, 128, dilation=30),
-            ResBlock(128, 128),
         )
-        self.block4 = nn.Sequential(
+        self.block3 = nn.Sequential(
             ResBlock(128, 256, stride=2),
             ResBlock(256, 256),
             ResBlock(256, 256, dilation=6),
@@ -45,34 +27,43 @@ class DeepLabV3Plus(nn.Module):
             ResBlock(256, 256),
             ResBlock(256, 256, dilation=18),
             ResBlock(256, 256),
-            ResBlock(256, 256, dilation=30),
-            ResBlock(256, 256),
         )
-        self.block5 = nn.Sequential(
+        self.block4 = nn.Sequential(
             ResBlock(256, 512, stride=2),
             ResBlock(512, 512),
             ResBlock(512, 512, dilation=6),
             ResBlock(512, 512),
             ResBlock(512, 512, dilation=12),
             ResBlock(512, 512),
+            ResBlock(512, 512, dilation=18),
+            ResBlock(512, 512),
+            ResBlock(512, 512, dilation=30),
+            ResBlock(512, 512),
         )
 
         self.high_level_block = nn.Sequential(
             ResBlock(512, 512),
+            ResBlock(512, 512, dilation=6),
+            ResBlock(512, 512),
         )
-        self.high2middle = nn.Sequential(ResBlock(512, 128))
+        self.high2middle = nn.Sequential(ResBlock(512, 256), )
         self.middle_level_block = nn.Sequential(
-            ResBlock(128, 128)
+            ResBlock(256, 256),
+            ResBlock(256, 256, dilation=6),
+            ResBlock(256, 256),
         )
-        self.cls_conv = nn.Sequential(bn(128), relu,
-                                      nn.Conv2d(128, num_classes - 1, 1))
-
-        self.middle2low = nn.Sequential(ResBlock(128, 64), )
+        self.middle2low = nn.Sequential(ResBlock(256, 128), )
         self.low_level_block = nn.Sequential(
-            ResBlock(64, 64)
+            ResBlock(128, 128),
+            ResBlock(128, 128, dilation=6),
+            ResBlock(128, 128),
         )
-        self.obj_conv = nn.Sequential(bn(64), relu,
-                                      nn.Conv2d(64, 1, 1))
+
+        self.cls_conv = nn.Sequential(bn(256), relu,
+                                      nn.Conv2d(256, num_classes - 1, 1))
+
+        self.obj_conv = nn.Sequential(bn(128), relu,
+                                      nn.Conv2d(128, 1, 1))
 
     def forward(self, x, var=None):
         x = self.conv1(x)
@@ -82,12 +73,11 @@ class DeepLabV3Plus(nn.Module):
         x = self.block3(x)
         middle_level_feat = x
         x = self.block4(x)
-        x = self.block5(x)
         high_level_feat = x
         high_level_feat = self.high_level_block(high_level_feat)
         high_level_feat = self.high2middle(high_level_feat)
         high_level_feat = F.interpolate(high_level_feat,
-                                        scale_factor=4,
+                                        scale_factor=2,
                                         mode='bilinear',
                                         align_corners=True)
         middle_level_feat = middle_level_feat + high_level_feat
