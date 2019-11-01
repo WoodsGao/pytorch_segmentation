@@ -28,11 +28,7 @@ def test(model, val_loader, obj_conf=0.5):
             outputs = model(inputs)
             loss = compute_loss(outputs, targets)
             val_loss += loss.item()
-            predicted = torch.cat(
-                [outputs[0].sigmoid(), outputs[1].softmax(1)], 1)
-            predicted[:, 0, :, :][predicted[:, 0, :, :] > obj_conf] = 1
-            predicted[:, 0, :, :][predicted[:, 0, :, :] < 1] = 0
-            predicted = predicted.max(1)[1]
+            predicted = outputs.max(1)[1]
             if idx == 0:
                 show_batch('test_batch.png', inputs.cpu(), predicted.cpu(),
                            classes)
