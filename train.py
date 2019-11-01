@@ -114,7 +114,6 @@ def train(data_dir,
                 targets = targets.max(1)[1]
             outputs = model(inputs)
             loss = compute_loss(outputs, targets)
-            loss = loss.mean()
             loss.backward()
             total_loss += loss.item()
             mem = torch.cuda.memory_cached() / 1E9 if torch.cuda.is_available(

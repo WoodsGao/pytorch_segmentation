@@ -108,7 +108,7 @@ class DeepLabV3Plus(nn.Module):
                                  scale_factor=4,
                                  mode='bilinear',
                                  align_corners=True)
-        return obj_mask.sigmoid(), cls_mask
+        return obj_mask, cls_mask
 
 
 if __name__ == "__main__":
