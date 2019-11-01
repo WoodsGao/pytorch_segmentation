@@ -28,7 +28,8 @@ def test(model, val_loader, obj_conf=0.5):
             outputs = model(inputs)
             loss = compute_loss(outputs, targets)
             val_loss += loss.item()
-            predicted = torch.cat([outputs[0].sigmoid(), outputs[1].softmax(1)], 1)
+            predicted = torch.cat(
+                [outputs[0].sigmoid(), outputs[1].softmax(1)], 1)
             predicted[:, 0, :, :][predicted[:, 0, :, :] > obj_conf] = 1
             predicted[:, 0, :, :][predicted[:, 0, :, :] < 1] = 0
             predicted = predicted.max(1)[1]
@@ -50,14 +51,22 @@ def test(model, val_loader, obj_conf=0.5):
                 fp[c_i] += fpi
             union = tp + fp + fn
             union[union <= 0] = 1
-            pbar.set_description('loss: %8lf, miou: %8lf' %
-                                 (val_loss / batch_idx, (tp / union).mean()))
+            miou = tp / union
+            T = tp + fn
+            P = tp + fp
+            P[P <= 0] = 1
+            P = tp / P
+            R = tp + fn
+            R[R <= 0] = 1
+            R = tp / R
+            F1 = (2 * tp + fp + fn)
+            F1[F1 <= 0] = 1
+            F1 = 2 * tp / F1
+            pbar.set_description(
+                'loss: %8lf, mAP: %8lf, F1: %8lf, miou: %8lf' %
+                (val_loss / batch_idx, P.mean(), F1.mean(), miou.mean()))
     print('')
-    miou = tp / union
-    T = tp + fn
-    P = tp / (tp + fp)
-    R = tp / (tp + fn)
-    F1 = 2 * tp / (2 * tp + fp + fn)
+
     for c_i, c in enumerate(classes):
         print(
             'cls: %8s, targets: %8d, pre: %8lf, rec: %8lf, iou: %8lf, F1: %8lf'
@@ -68,15 +77,14 @@ def test(model, val_loader, obj_conf=0.5):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data-dir', type=str, default='data/voc/val.txt')
+    parser.add_argument('--val-list', type=str, default='data/voc/valid.txt')
     parser.add_argument('--img-size', type=int, default=224)
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--weights', type=str, default='')
     parser.add_argument('--num-workers', type=int, default=0)
-
     opt = parser.parse_args()
 
-    val_data = SegmentationDataset(opt.data_dir,
+    val_data = SegmentationDataset(opt.val_list,
                                    img_size=opt.img_size,
                                    augments=[
                                        augments.BGR2RGB(),
@@ -96,5 +104,5 @@ if __name__ == "__main__":
     if opt.weights:
         state_dict = torch.load(opt.weights, map_location=device)
         model.load_state_dict(state_dict['model'])
-    val_loss, miou, F1 = test(model, val_loader)
+    val_loss, miou = test(model, val_loader)
     print('val_loss: %8g   miou: %8g' % (val_loss, miou))
