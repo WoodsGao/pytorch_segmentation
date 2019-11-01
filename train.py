@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
+from torchvision.models import DenseNet
 from utils.datasets import SegmentationDataset, show_batch
 from models import DeepLabV3Plus
 import os

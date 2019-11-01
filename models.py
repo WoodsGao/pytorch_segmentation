@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils.blocks import bn, relu, ResBlock, BLD, Aspp, AsppPooling
+from utils.blocks import bn, relu, ResBlock, BLD, Aspp, AsppPooling, DenseBlock
 import math
 
 
@@ -13,63 +13,63 @@ class DeepLabV3Plus(nn.Module):
         self.block1 = nn.Sequential(ResBlock(32, 64, stride=2))
         self.block2 = nn.Sequential(
             ResBlock(64, 128, stride=2),
-            ResBlock(128, 128),
-            ResBlock(128, 128, dilation=6),
-            ResBlock(128, 128),
+            DenseBlock(128, 128),
+            DenseBlock(128, 128, dilation=6),
+            DenseBlock(128, 128),
         )
         self.block3 = nn.Sequential(
             ResBlock(128, 256, stride=2),
-            ResBlock(256, 256),
-            ResBlock(256, 256, dilation=6),
-            ResBlock(256, 256),
-            ResBlock(256, 256, dilation=12),
-            ResBlock(256, 256),
-            ResBlock(256, 256, dilation=18),
-            ResBlock(256, 256),
+            DenseBlock(256, 256),
+            DenseBlock(256, 256, dilation=6),
+            DenseBlock(256, 256),
+            DenseBlock(256, 256, dilation=12),
+            DenseBlock(256, 256),
+            DenseBlock(256, 256, dilation=18),
+            DenseBlock(256, 256),
         )
         self.block4 = nn.Sequential(
             ResBlock(256, 512, stride=2),
-            ResBlock(512, 512),
-            ResBlock(512, 512, dilation=6),
-            ResBlock(512, 512),
-            ResBlock(512, 512, dilation=12),
-            ResBlock(512, 512),
-            ResBlock(512, 512, dilation=18),
-            ResBlock(512, 512),
-            ResBlock(512, 512, dilation=30),
-            ResBlock(512, 512),
+            DenseBlock(512, 512),
+            DenseBlock(512, 512, dilation=6),
+            DenseBlock(512, 512),
+            DenseBlock(512, 512, dilation=12),
+            DenseBlock(512, 512),
+            DenseBlock(512, 512, dilation=18),
+            DenseBlock(512, 512),
+            DenseBlock(512, 512, dilation=30),
+            DenseBlock(512, 512),
         )
         self.block5 = nn.Sequential(
             ResBlock(512, 1024, stride=2),
-            ResBlock(1024, 1024),
-            ResBlock(1024, 1024, dilation=6),
-            ResBlock(1024, 1024, dilation=12),
-            ResBlock(1024, 1024, dilation=18),
-            ResBlock(1024, 1024),
+            DenseBlock(1024, 1024),
+            DenseBlock(1024, 1024, dilation=6),
+            DenseBlock(1024, 1024, dilation=12),
+            DenseBlock(1024, 1024, dilation=18),
+            DenseBlock(1024, 1024),
         )
 
         self.high_level_block = nn.Sequential(
-            ResBlock(1024, 1024),
-            ResBlock(1024, 1024, dilation=6),
-            ResBlock(1024, 1024),
+            DenseBlock(1024, 1024),
+            DenseBlock(1024, 1024, dilation=6),
+            DenseBlock(1024, 1024),
         )
         self.high2middle = nn.Sequential(ResBlock(1024, 512),
                                          ResBlock(512, 256))
         self.middle_level_block = nn.Sequential(
-            ResBlock(256, 256),
-            ResBlock(256, 256, dilation=6),
-            ResBlock(256, 256),
+            DenseBlock(256, 256),
+            DenseBlock(256, 256, dilation=6),
+            DenseBlock(256, 256),
         )
-        self.cls_conv = nn.Sequential(ResBlock(256, 256), bn(256), relu,
+        self.cls_conv = nn.Sequential(DenseBlock(256, 256), bn(256), relu,
                                       nn.Conv2d(256, num_classes - 1, 1))
 
         self.middle2low = nn.Sequential(ResBlock(256, 128), )
         self.low_level_block = nn.Sequential(
-            ResBlock(128, 128),
-            ResBlock(128, 128, dilation=6),
-            ResBlock(128, 128),
+            DenseBlock(128, 128),
+            DenseBlock(128, 128, dilation=6),
+            DenseBlock(128, 128),
         )
-        self.obj_conv = nn.Sequential(ResBlock(128, 128), bn(128), relu,
+        self.obj_conv = nn.Sequential(DenseBlock(128, 128), bn(128), relu,
                                       nn.Conv2d(128, 1, 1))
 
     def forward(self, x, var=None):

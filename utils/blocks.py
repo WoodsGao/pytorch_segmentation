@@ -3,8 +3,17 @@ import torch.nn as nn
 import math
 import torch.nn.functional as F
 
-relu = nn.LeakyReLU(0.1, inplace=True)
+relu = nn.ReLU(True)
+lrelu = nn.LeakyReLU(0.1, inplace=True)
 bn = nn.BatchNorm2d
+
+
+class CReLU(nn.Module):
+    def forward(self, x):
+        return torch.cat([relu(x), relu(-x)], 1)
+
+
+crelu = CReLU()
 
 
 class SELayer(nn.Module):
@@ -13,7 +22,7 @@ class SELayer(nn.Module):
         self.gap = nn.AdaptiveAvgPool2d(1)
         self.weight = nn.Sequential(
             nn.Conv2d(filters, filters // 16 if filters >= 32 else 8, 1),
-            relu,
+            lrelu,
             nn.Conv2d(filters // 16 if filters >= 32 else 8, filters, 1),
             nn.Sigmoid(),
         )
@@ -69,12 +78,10 @@ class BLD(nn.Module):
                  stride=1,
                  groups=1,
                  dilation=1,
-                 activate=True,
+                 activate=crelu,
                  se_block=False):
         super(BLD, self).__init__()
-        if activate:
-            activate = relu
-        else:
+        if activate is None:
             activate = EmptyLayer()
         if se_block:
             se_block = SELayer(in_features)
@@ -82,7 +89,7 @@ class BLD(nn.Module):
             se_block = EmptyLayer()
         self.bld = nn.Sequential(
             bn(in_features), se_block, activate,
-            nn.Conv2d(in_features,
+            nn.Conv2d(in_features * 2 if isinstance(activate, CReLU) else in_features,
                       out_features,
                       ksize,
                       stride=stride,
@@ -115,7 +122,7 @@ class ResBlock(nn.Module):
             BLD(out_features // 4,
                 out_features,
                 1,
-                activate=False,
+                activate=None,
                 se_block=se_block))
         self.downsample = EmptyLayer()
         if stride > 1 or in_features != out_features:
@@ -123,7 +130,48 @@ class ResBlock(nn.Module):
                                   out_features,
                                   3,
                                   stride,
-                                  activate=False)
+                                  activate=None)
 
     def forward(self, x):
         return self.downsample(x) + self.block(x)
+
+
+class DenseBlock(nn.Module):
+    def __init__(self,
+                 in_features,
+                 out_features,
+                 stride=1,
+                 dilation=1,
+                 drop_rate=0.5,
+                 se_block=True):
+        super(DenseBlock, self).__init__()
+        assert in_features == out_features
+        assert in_features % 2 == 0
+        assert stride == 1
+        features = in_features
+        self.features = features // 2
+        self.block = nn.Sequential(
+            BLD(features, features // 4, 1),
+            BLD(
+                features // 4,
+                features // 4,
+                stride=stride,
+                dilation=dilation,
+                groups=features // 4,
+            ),
+            BLD(features // 4,
+                features // 2,
+                1,
+                activate=None,
+                se_block=se_block),
+            nn.Dropout(drop_rate) if drop_rate > 0 else EmptyLayer(),
+        )
+
+    def forward(self, x):
+        x = torch.cat([x[:, :self.features], self.block(x)], 1)
+        return x
+
+
+if __name__ == "__main__":
+    a = torch.ones([2, 1024, 224, 224])
+    print(DenseBlock(1024, 1024)(a).shape)
