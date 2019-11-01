@@ -33,7 +33,8 @@ def test(model, val_loader, obj_conf=0.5):
             predicted[:, 0, :, :][predicted[:, 0, :, :] < 1] = 0
             predicted = predicted.max(1)[1]
             if idx == 0:
-                show_batch('test_batch.png', inputs.cpu(), predicted.cpu(), classes)
+                show_batch('test_batch.png', inputs.cpu(), predicted.cpu(),
+                           classes)
             predicted = predicted.view(-1)
             targets = targets.view(-1)
             eq = predicted.eq(targets)
@@ -49,17 +50,20 @@ def test(model, val_loader, obj_conf=0.5):
                 fp[c_i] += fpi
             union = tp + fp + fn
             union[union <= 0] = 1
-            pbar.set_description('loss: %10lf, miou: %10lf' %
-                                 (val_loss / batch_idx,
-                                  (tp / union).mean()))
+            pbar.set_description('loss: %8lf, miou: %8lf' %
+                                 (val_loss / batch_idx, (tp / union).mean()))
     print('')
+    miou = tp / union
+    T = tp + fn
+    P = tp / (tp + fp)
+    R = tp / (tp + fn)
+    F1 = 2 * tp / (2 * tp + fp + fn)
     for c_i, c in enumerate(classes):
-        print('cls: %10s, targets: %10d, pre: %10lf, rec: %10lf, iou: %10lf' %
-              (c[0], tp[c_i] + fn[c_i], tp[c_i] /
-               (tp[c_i] + fp[c_i]), tp[c_i] /
-               (tp[c_i] + fn[c_i]), tp[c_i] / union[c_i]))
+        print(
+            'cls: %8s, targets: %8d, pre: %8lf, rec: %8lf, iou: %8lf, F1: %8lf'
+            % (c[0], T[c_i], P[c_i], R[c_i], miou[c_i], F1[c_i]))
     val_loss /= len(val_loader)
-    return val_loss, (tp / union).mean().item()
+    return val_loss, miou.mean().item(), F1.mean().item()
 
 
 if __name__ == "__main__":
@@ -72,17 +76,15 @@ if __name__ == "__main__":
 
     opt = parser.parse_args()
 
-    val_data = SegmentationDataset(
-        opt.data_dir,
-        img_size=opt.img_size,
-        augments=[
-            augments.BGR2RGB(),
-            augments.Normalize(),
-            augments.NHWC2NCHW(),
-        ]
-    )
+    val_data = SegmentationDataset(opt.data_dir,
+                                   img_size=opt.img_size,
+                                   augments=[
+                                       augments.BGR2RGB(),
+                                       augments.Normalize(),
+                                       augments.NHWC2NCHW(),
+                                   ])
     val_loader = DataLoader(
-        val_data, 
+        val_data,
         batch_size=opt.batch_size,
         shuffle=True,
         num_workers=opt.num_workers,
@@ -94,5 +96,5 @@ if __name__ == "__main__":
     if opt.weights:
         state_dict = torch.load(opt.weights, map_location=device)
         model.load_state_dict(state_dict['model'])
-    val_loss, acc = test(model, val_loader)
-    print('val_loss: %10g   acc: %10g' % (val_loss, acc))
+    val_loss, miou, F1 = test(model, val_loader)
+    print('val_loss: %8g   miou: %8g, F1: %8g' % (val_loss, miou, F1))

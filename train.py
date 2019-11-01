@@ -87,8 +87,6 @@ def train(data_dir,
         optimizer.load_state_dict(state_dict['optimizer'])
 
     # create dataset
-    # against_inputs = []
-    # against_targets = []
     while epoch < epochs:
         print('%d/%d' % (epoch, epochs))
         # train
@@ -100,6 +98,10 @@ def train(data_dir,
         optimizer.zero_grad()
         for idx, (inputs, targets) in pbar:
             batch_idx = idx + 1
+            if idx == 0 and epoch == 0:
+                show_batch('train_batch.png', inputs, targets, classes)
+            inputs = inputs.to(device)
+            targets = targets.to(device)
             if multi_scale:
                 inputs = F.interpolate(inputs,
                                        size=img_size,
@@ -112,14 +114,8 @@ def train(data_dir,
                                         mode='bilinear',
                                         align_corners=False)
                 targets = targets.max(1)[1]
-            if idx == 0 and epoch == 0:
-                show_batch('train_batch.png', inputs, targets, classes)
-            inputs = inputs.to(device)
-            targets = targets.to(device)
             outputs = model(inputs)
             loss = compute_loss(outputs, targets)
-            # against_inputs.append(inputs[loss > 2 * loss.mean()])
-            # against_targets.append(targets[loss > 2 * loss.mean()])
             loss = loss.mean()
             loss.backward()
             total_loss += loss.item()
@@ -137,24 +133,6 @@ def train(data_dir,
                 if multi_scale:
                     img_size = random.randrange(img_size_min,
                                                 img_size_max) * 32
-
-                # # against inputs training
-                # if len(against_inputs) == 0:
-                #     continue
-                # against_inputs = torch.cat(against_inputs, 0)
-                # against_targets = torch.cat(against_targets, 0)
-                # for ei in range(0, against_inputs.size(0), batch_size):
-                #     inputs = against_inputs[ei:ei + batch_size]
-                #     if inputs.size(0) < 2:
-                #         continue
-                #     targets = against_targets[ei:ei + batch_size]
-                #     outputs = model(inputs)
-                #     loss = compute_loss(outputs, targets)
-                #     loss.mean().backward()
-                # optimizer.step()
-                # optimizer.zero_grad()
-                # against_inputs = []
-                # against_targets = []
 
             torch.cuda.empty_cache()
         print('')
@@ -191,9 +169,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--data-dir', type=str, default='data/voc')
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--img-size', type=int, default=320)
-    parser.add_argument('--batch-size', type=int, default=32)
-    parser.add_argument('--accumulate', type=int, default=4)
+    parser.add_argument('--img-size', type=int, default=256)
+    parser.add_argument('--batch-size', type=int, default=4)
+    parser.add_argument('--accumulate', type=int, default=16)
     parser.add_argument('--num-workers', type=int, default=0)
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--resume', action='store_true')
