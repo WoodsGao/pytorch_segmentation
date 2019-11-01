@@ -121,7 +121,6 @@ def train(data_dir,
             # against_targets.append(targets[loss > 2 * loss.mean()])
             loss = loss.mean()
             loss.backward()
-            against_inputs
             total_obj_loss += obj_loss.mean().item()
             total_cls_loss += cls_loss.mean().item()
             total_loss += loss.item()
