@@ -10,9 +10,16 @@ class DeepLabV3Plus(nn.Module):
         super(DeepLabV3Plus, self).__init__()
         # full pre-activation
         self.conv1 = nn.Conv2d(3, 32, 7, 1, 3)
-        self.block1 = nn.Sequential(ResBlock(32, 64, stride=2))
+        self.block1 = nn.Sequential(
+            ResBlock(32, 64, stride=2),
+            DenseBlock(64, 64),
+            DenseBlock(64, 64, dilation=6),
+            DenseBlock(64, 64),
+        )
         self.block2 = nn.Sequential(
             ResBlock(64, 128, stride=2),
+            DenseBlock(128, 128),
+            DenseBlock(128, 128, dilation=6),
             DenseBlock(128, 128),
             DenseBlock(128, 128, dilation=6),
             DenseBlock(128, 128),
@@ -25,6 +32,8 @@ class DeepLabV3Plus(nn.Module):
             DenseBlock(256, 256, dilation=12),
             DenseBlock(256, 256),
             DenseBlock(256, 256, dilation=18),
+            DenseBlock(256, 256),
+            DenseBlock(256, 256, dilation=30),
             DenseBlock(256, 256),
         )
         self.block4 = nn.Sequential(
@@ -43,33 +52,26 @@ class DeepLabV3Plus(nn.Module):
             ResBlock(512, 1024, stride=2),
             DenseBlock(1024, 1024),
             DenseBlock(1024, 1024, dilation=6),
+            DenseBlock(1024, 1024),
             DenseBlock(1024, 1024, dilation=12),
-            DenseBlock(1024, 1024, dilation=18),
             DenseBlock(1024, 1024),
         )
 
         self.high_level_block = nn.Sequential(
-            DenseBlock(1024, 1024),
-            DenseBlock(1024, 1024, dilation=6),
-            DenseBlock(1024, 1024),
+            BLD(1024, 1024),
         )
-        self.high2middle = nn.Sequential(ResBlock(1024, 512),
-                                         ResBlock(512, 256))
+        self.high2middle = nn.Sequential(BLD(1024, 256))
         self.middle_level_block = nn.Sequential(
-            DenseBlock(256, 256),
-            DenseBlock(256, 256, dilation=6),
-            DenseBlock(256, 256),
+            BLD(256, 256)
         )
-        self.cls_conv = nn.Sequential(DenseBlock(256, 256), bn(256), relu,
+        self.cls_conv = nn.Sequential(bn(256), relu,
                                       nn.Conv2d(256, num_classes - 1, 1))
 
-        self.middle2low = nn.Sequential(ResBlock(256, 128), )
+        self.middle2low = nn.Sequential(BLD(256, 128), )
         self.low_level_block = nn.Sequential(
-            DenseBlock(128, 128),
-            DenseBlock(128, 128, dilation=6),
-            DenseBlock(128, 128),
+            BLD(128, 128)
         )
-        self.obj_conv = nn.Sequential(DenseBlock(128, 128), bn(128), relu,
+        self.obj_conv = nn.Sequential(bn(128), relu,
                                       nn.Conv2d(128, 1, 1))
 
     def forward(self, x, var=None):

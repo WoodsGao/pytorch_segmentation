@@ -78,7 +78,7 @@ class BLD(nn.Module):
                  stride=1,
                  groups=1,
                  dilation=1,
-                 activate=crelu,
+                 activate=lrelu,
                  se_block=False):
         super(BLD, self).__init__()
         if activate is None:
@@ -111,7 +111,7 @@ class ResBlock(nn.Module):
                  se_block=True):
         super(ResBlock, self).__init__()
         self.block = nn.Sequential(
-            BLD(in_features, out_features // 4, 1),
+            BLD(in_features, out_features // 4, 1, activate=crelu),
             BLD(
                 out_features // 4,
                 out_features // 4,
@@ -151,7 +151,7 @@ class DenseBlock(nn.Module):
         features = in_features
         self.features = features // 2
         self.block = nn.Sequential(
-            BLD(features, features // 4, 1),
+            BLD(features, features // 4, 1, activate=crelu),
             BLD(
                 features // 4,
                 features // 4,
