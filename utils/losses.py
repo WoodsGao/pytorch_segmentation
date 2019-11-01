@@ -29,7 +29,7 @@ class FocalBCELoss(nn.Module):
 
 
 FOCAL = FocalBCELoss()
-CE = nn.CrossEntropyLoss(reduction='none', ignore_index=-1)
+CE = nn.CrossEntropyLoss(reduction='none')
 BCE = nn.BCEWithLogitsLoss(reduction='none')
 
 

@@ -17,7 +17,7 @@ def voc2dataset(data_dir):
     ]
     subprocess.call('\n'.join(cmd).format(
         os.path.join(data_dir, 'VOC2012/ImageSets/Segmentation/train.txt'),
-        os.path.join(data_dir, 'VOC2012/ImageSets/Segmentation/val.txt'),
+        os.path.join(data_dir, 'VOC2012/ImageSets/Segmentation/valid.txt'),
         os.path.join(data_dir, 'VOC2012/JPEGImages'),
         os.path.join(data_dir, 'VOC2012/SegmentationClass')), shell=True, universal_newlines=True)
     with open('data/voc/train.txt', 'r') as f:

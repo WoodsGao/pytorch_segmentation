@@ -1,7 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
-from torchvision.models import DenseNet
 from utils.datasets import SegmentationDataset, show_batch
 from models import DeepLabV3Plus
 import os
@@ -28,7 +27,6 @@ def train(data_dir,
           lr=1e-3,
           resume=False,
           weights='',
-          cache_len=3000,
           num_workers=0,
           augments_list=[],
           multi_scale=False,
@@ -38,7 +36,7 @@ def train(data_dir,
         img_size_min = max(img_size * 0.67 // 32, 1)
         img_size_max = max(img_size * 1.5 // 32, 1)
     train_dir = os.path.join(data_dir, 'train.txt')
-    val_dir = os.path.join(data_dir, 'val.txt')
+    val_dir = os.path.join(data_dir, 'valid.txt')
     train_data = SegmentationDataset(train_dir,
                                      'ttmp',
                                      cache_len=3000,
@@ -118,9 +116,8 @@ def train(data_dir,
             total_loss += loss.item()
             mem = torch.cuda.memory_cached() / 1E9 if torch.cuda.is_available(
             ) else 0  # (GB)
-            pbar.set_description(
-                'train mem: %5.2lfGB loss: %8lf scale: %4d' %
-                (mem, total_loss / batch_idx, inputs.size(2)))
+            pbar.set_description('train mem: %5.2lfGB loss: %8lf scale: %4d' %
+                                 (mem, total_loss / batch_idx, inputs.size(2)))
             if batch_idx % accumulate == 0 or \
                     batch_idx == len(train_loader):
                 optimizer.step()
@@ -135,10 +132,7 @@ def train(data_dir,
         print('')
         # validate
         if not no_test:
-            val_loss, miou = test(
-                model,
-                val_loader,
-            )
+            val_loss, miou = test(model, val_loader)
         # Save checkpoint.
         state_dict = {
             'model': model.state_dict(),
@@ -187,15 +181,17 @@ if __name__ == "__main__":
         augments.V_Flap(0.5)
     ]
     opt = parser.parse_args()
-    train(data_dir=opt.data_dir,
-          epochs=opt.epochs,
-          img_size=opt.img_size,
-          batch_size=opt.batch_size,
-          accumulate=opt.accumulate,
-          lr=opt.lr,
-          resume=opt.resume,
-          weights=opt.weights,
-          num_workers=opt.num_workers,
-          augments_list=augments_list,
-          multi_scale=opt.multi_scale, 
-          no_test=opt.no_test)
+    train(
+        data_dir=opt.data_dir,
+        epochs=opt.epochs,
+        img_size=opt.img_size,
+        batch_size=opt.batch_size,
+        accumulate=opt.accumulate,
+        lr=opt.lr,
+        resume=opt.resume,
+        weights=opt.weights,
+        num_workers=opt.num_workers,
+        augments_list=augments_list,
+        multi_scale=opt.multi_scale,
+        no_test=opt.no_test,
+    )
