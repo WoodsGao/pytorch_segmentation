@@ -86,8 +86,8 @@ def train(data_dir,
         optimizer.load_state_dict(state_dict['optimizer'])
 
     # create dataset
-    against_inputs = []
-    against_targets = []
+    # against_inputs = []
+    # against_targets = []
     while epoch < epochs:
         print('%d/%d' % (epoch, epochs))
         # train
@@ -117,8 +117,8 @@ def train(data_dir,
             targets = targets.to(device)
             outputs = model(inputs)
             loss, obj_loss, cls_loss = compute_loss(outputs, targets)
-            against_inputs.append(inputs[loss > 2 * loss.mean()])
-            against_targets.append(targets[loss > 2 * loss.mean()])
+            # against_inputs.append(inputs[loss > 2 * loss.mean()])
+            # against_targets.append(targets[loss > 2 * loss.mean()])
             loss = loss.mean()
             loss.backward()
             against_inputs
@@ -140,23 +140,23 @@ def train(data_dir,
                     img_size = random.randrange(img_size_min,
                                                 img_size_max) * 32
 
-                # against inputs training
-                if len(against_inputs) == 0:
-                    continue
-                against_inputs = torch.cat(against_inputs, 0)
-                against_targets = torch.cat(against_targets, 0)
-                for ei in range(0, against_inputs.size(0), batch_size):
-                    inputs = against_inputs[ei:ei + batch_size]
-                    if inputs.size(0) < 2:
-                        continue
-                    targets = against_targets[ei:ei + batch_size]
-                    outputs = model(inputs)
-                    loss = compute_loss(outputs, targets)[0]
-                    loss.mean().backward()
-                optimizer.step()
-                optimizer.zero_grad()
-                against_inputs = []
-                against_targets = []
+                # # against inputs training
+                # if len(against_inputs) == 0:
+                #     continue
+                # against_inputs = torch.cat(against_inputs, 0)
+                # against_targets = torch.cat(against_targets, 0)
+                # for ei in range(0, against_inputs.size(0), batch_size):
+                #     inputs = against_inputs[ei:ei + batch_size]
+                #     if inputs.size(0) < 2:
+                #         continue
+                #     targets = against_targets[ei:ei + batch_size]
+                #     outputs = model(inputs)
+                #     loss = compute_loss(outputs, targets)[0]
+                #     loss.mean().backward()
+                # optimizer.step()
+                # optimizer.zero_grad()
+                # against_inputs = []
+                # against_targets = []
 
             torch.cuda.empty_cache()
         print('')
