@@ -58,6 +58,7 @@ class SegmentationDataset(torch.utils.data.Dataset):
     def get_item(self, idx):
         img = cv2.imread(self.data[idx][0])
         img = cv2.resize(img, (self.img_size, self.img_size))
+        img = np.float32(img)
         seg_color = cv2.imread(self.data[idx][1])
         seg = np.zeros(
             [seg_color.shape[0], seg_color.shape[1],
@@ -95,6 +96,8 @@ class SegmentationDataset(torch.utils.data.Dataset):
 
 
 def show_batch(save_path, inputs, targets, classes):
+    inputs = inputs.clone()
+    targets = targets.clone()
     imgs = []
     segs = []
     for bi, (img, seg) in enumerate(zip(inputs, targets)):

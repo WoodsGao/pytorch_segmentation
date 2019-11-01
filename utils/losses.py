@@ -29,7 +29,7 @@ class FocalBCELoss(nn.Module):
 
 
 FOCAL = FocalBCELoss()
-CE = nn.CrossEntropyLoss(reduction='none')
+CE = nn.CrossEntropyLoss(reduction='none', ignore_index=-1)
 BCE = nn.BCEWithLogitsLoss(reduction='none')
 
 
@@ -39,11 +39,11 @@ def compute_loss(outputs, targets, obj_weight=1, cls_weight=1):
     true_obj[true_obj > 1] = 0
     true_obj = true_obj.unsqueeze(1)
     obj_loss = BCE(pred_obj, true_obj.float())
-    obj_loss = obj_loss ** 2
-    obj_loss = obj_loss.mean() * obj_weight
+    obj_loss = torch.pow(obj_loss, 2)
+    obj_loss = obj_loss.mean()
     true_cls = targets - 1
     cls_loss = CE(pred_cls, true_cls)
-    cls_loss = cls_loss ** 2
-    cls_loss = cls_loss.mean() * cls_weight
+    cls_loss = torch.pow(cls_loss, 2)
+    cls_loss = cls_loss.mean()
     loss = obj_loss + cls_loss
     return loss
