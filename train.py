@@ -117,19 +117,17 @@ def train(data_dir,
             inputs = inputs.to(device)
             targets = targets.to(device)
             outputs = model(inputs)
-            loss, obj_loss, cls_loss = compute_loss(outputs, targets)
+            loss = compute_loss(outputs, targets)
             # against_inputs.append(inputs[loss > 2 * loss.mean()])
             # against_targets.append(targets[loss > 2 * loss.mean()])
             loss = loss.mean()
             loss.backward()
-            total_obj_loss += obj_loss.mean().item()
-            total_cls_loss += cls_loss.mean().item()
             total_loss += loss.item()
             mem = torch.cuda.memory_cached() / 1E9 if torch.cuda.is_available(
             ) else 0  # (GB)
             pbar.set_description(
-                'train mem: %5.2lfGB obj_loss: %8lf cls_loss: %8f scale: %4d' %
-                (mem, total_obj_loss / batch_idx, total_cls_loss / batch_idx, inputs.size(2)))
+                'train mem: %5.2lfGB loss: %8lf scale: %4d' %
+                (mem, total_loss / batch_idx, inputs.size(2)))
             if batch_idx % accumulate == 0 or \
                     batch_idx == len(train_loader):
                 optimizer.step()
@@ -151,7 +149,7 @@ def train(data_dir,
                 #         continue
                 #     targets = against_targets[ei:ei + batch_size]
                 #     outputs = model(inputs)
-                #     loss = compute_loss(outputs, targets)[0]
+                #     loss = compute_loss(outputs, targets)
                 #     loss.mean().backward()
                 # optimizer.step()
                 # optimizer.zero_grad()

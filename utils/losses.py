@@ -44,4 +44,4 @@ def compute_loss(outputs, targets, obj_weight=10, cls_weight=1):
     cls_loss = CE(pred_cls, true_cls)
     cls_loss = cls_loss.view(cls_loss.size(0), -1).mean(1) * cls_weight
     loss = obj_loss + cls_loss
-    return loss, obj_loss, cls_loss
+    return loss
