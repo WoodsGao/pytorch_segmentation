@@ -33,7 +33,7 @@ CE = nn.CrossEntropyLoss(reduction='none', ignore_index=-1)
 BCE = nn.BCEWithLogitsLoss(reduction='none')
 
 
-def compute_loss(outputs, targets, obj_weight=10, cls_weight=1):
+def compute_loss(outputs, targets, obj_weight=1, cls_weight=1):
     pred_obj, pred_cls = outputs
     true_obj = targets + 1
     true_obj[true_obj > 1] = 0
