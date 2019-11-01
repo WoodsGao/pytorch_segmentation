@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils.blocks import bn, relu, ResBlock, BLD, Aspp, AsppPooling, DenseBlock
+from utils.blocks import bn, lrelu, ResBlock, BLD, Aspp, AsppPooling, DenseBlock
 import math
 
 
@@ -59,10 +59,10 @@ class DeepLabV3Plus(nn.Module):
             ResBlock(128, 128),
         )
 
-        self.cls_conv = nn.Sequential(bn(256), relu,
+        self.cls_conv = nn.Sequential(bn(256), lrelu,
                                       nn.Conv2d(256, num_classes - 1, 1))
 
-        self.obj_conv = nn.Sequential(bn(128), relu,
+        self.obj_conv = nn.Sequential(bn(128), lrelu,
                                       nn.Conv2d(128, 1, 1))
 
         # init weight and bias
