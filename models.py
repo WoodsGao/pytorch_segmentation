@@ -9,7 +9,6 @@ class DeepLabV3Plus(nn.Module):
     def __init__(self, num_classes):
         super(DeepLabV3Plus, self).__init__()
         # full pre-activation
-        # full pre-activation
         self.conv1 = nn.Conv2d(3, 32, 7, 1, 3)
         self.block1 = nn.Sequential(ResBlock(32, 64, stride=2))
         self.block2 = nn.Sequential(
