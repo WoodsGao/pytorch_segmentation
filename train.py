@@ -92,8 +92,6 @@ def train(data_dir,
         # train
         model.train()
         total_loss = 0
-        total_obj_loss = 0
-        total_cls_loss = 0
         pbar = tqdm(enumerate(train_loader), total=len(train_loader))
         optimizer.zero_grad()
         for idx, (inputs, targets) in pbar:

@@ -63,7 +63,7 @@ def test(model, val_loader, obj_conf=0.5):
             'cls: %8s, targets: %8d, pre: %8lf, rec: %8lf, iou: %8lf, F1: %8lf'
             % (c[0], T[c_i], P[c_i], R[c_i], miou[c_i], F1[c_i]))
     val_loss /= len(val_loader)
-    return val_loss, miou.mean().item(), F1.mean().item()
+    return val_loss, miou.mean().item()
 
 
 if __name__ == "__main__":
@@ -97,4 +97,4 @@ if __name__ == "__main__":
         state_dict = torch.load(opt.weights, map_location=device)
         model.load_state_dict(state_dict['model'])
     val_loss, miou, F1 = test(model, val_loader)
-    print('val_loss: %8g   miou: %8g, F1: %8g' % (val_loss, miou, F1))
+    print('val_loss: %8g   miou: %8g' % (val_loss, miou))
