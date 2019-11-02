@@ -175,7 +175,7 @@ if __name__ == "__main__":
         augments.HSV_S(0.3, 0.2),
         augments.HSV_V(0.3, 0.2),
         augments.Rotate(1, 0.1),
-        augments.Blur(0.05, 0.1),
+        augments.Blur(0.02, 0.1),
         augments.Noise(0.05, 0.1),
         augments.H_Flap(0.5),
         augments.V_Flap(0.5)
