@@ -58,11 +58,8 @@ class DeepLabV3Plus(nn.Module):
             ResBlock(128, 128),
         )
 
-        self.cls_conv = nn.Sequential(bn(256), lrelu,
-                                      nn.Conv2d(256, num_classes - 1, 1))
-
-        self.obj_conv = nn.Sequential(bn(128), lrelu,
-                                      nn.Conv2d(128, 1, 1))
+        self.mask_conv = nn.Sequential(bn(128), lrelu,
+                                      nn.Conv2d(128, num_classes, 1))
 
         # init weight and bias
         for m in self.modules():
@@ -90,12 +87,6 @@ class DeepLabV3Plus(nn.Module):
                                         align_corners=True)
         middle_level_feat = middle_level_feat + high_level_feat
         middle_level_feat = self.middle_level_block(middle_level_feat)
-        cls_mask = self.cls_conv(middle_level_feat)
-        cls_mask = F.interpolate(cls_mask,
-                                 scale_factor=8,
-                                 mode='bilinear',
-                                 align_corners=True)
-
         middle_level_feat = self.middle2low(middle_level_feat)
         middle_level_feat = F.interpolate(middle_level_feat,
                                           scale_factor=2,
@@ -103,14 +94,14 @@ class DeepLabV3Plus(nn.Module):
                                           align_corners=True)
         low_level_feat = low_level_feat + middle_level_feat
         low_level_feat = self.low_level_block(low_level_feat)
-        obj_mask = self.obj_conv(low_level_feat)
-        obj_mask = F.interpolate(obj_mask,
+        mask = self.mask_conv(low_level_feat)
+        mask = F.interpolate(mask,
                                  scale_factor=4,
                                  mode='bilinear',
                                  align_corners=True)
-        return torch.cat([obj_mask, cls_mask], 1)
+        return mask
 
 
 if __name__ == "__main__":
     a = torch.ones([2, 3, 224, 224])
-    print([o.shape for o in DeepLabV3Plus(8)(a)])
+    print(DeepLabV3Plus(8)(a).shape)

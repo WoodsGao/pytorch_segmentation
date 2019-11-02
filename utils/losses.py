@@ -15,10 +15,6 @@ class FocalBCELoss(nn.Module):
             self.weight = 1
 
     def forward(self, y_pred, y_true):
-        b = y_pred.size(0)
-        c = y_pred.size(1)
-        y_pred = y_pred.view(b, c, -1)
-        y_true = y_true.view(b, c, -1)
         y_pred = torch.clamp(y_pred, 1e-5, 1 - 1e-5)
         a = self.alpha
         g = self.gamma
