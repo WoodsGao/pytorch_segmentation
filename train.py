@@ -97,7 +97,8 @@ def train(data_dir,
         optimizer,
         milestones=[round(epochs * x) for x in [0.8, 0.9]],
         gamma=0.1,
-        last_epoch=epoch - 1)
+    )
+    scheduler.last_epoch = epoch - 1
     # summary(model, (3, img_size, img_size))
 
     # create dataset
