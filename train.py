@@ -86,8 +86,9 @@ def train(data_dir,
     optimizer = optim.SGD(model.parameters(),
                           lr=lr,
                           momentum=0.9,
-                          weight_decay=5e-4,
+                        #   weight_decay=5e-4,
                           nesterov=True)
+    # optimizer = optim.Adam(model.parameters())
     # lf = lambda x: 1 - x / epochs  # linear ramp to zero
     # lf = lambda x: 10 ** (hyp['lrf'] * x / epochs)  # exp ramp
     # lf = lambda x: 1 - 10 ** (hyp['lrf'] * (1 - x / epochs))  # inverse exp ramp
