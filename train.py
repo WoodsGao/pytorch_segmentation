@@ -1,18 +1,20 @@
+import os
+import random
+import argparse
+from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
-from utils.datasets import SegmentationDataset, show_batch
+import torch.optim as optim
+import torch.optim.lr_scheduler as lr_scheduler
 from models import DeepLabV3Plus
-import os
 from utils import device
 from utils import augments
 from utils.optims import AdaBoundW
+from utils.datasets import SegmentationDataset, show_batch
 from utils.losses import compute_loss
-from tqdm import tqdm
 from test import test
 # from torchsummary import summary
-import random
-import argparse
 
 print(device)
 # if torch.cuda.is_available():
@@ -74,15 +76,29 @@ def train(data_dir,
     num_classes = len(classes)
     model = DeepLabV3Plus(num_classes)
     model = model.to(device)
-    optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
-    # summary(model, (3, img_size, img_size))
     if resume:
         state_dict = torch.load(weights, map_location=device)
         best_miou = state_dict['miou']
         best_loss = state_dict['loss']
         epoch = state_dict['epoch']
         model.load_state_dict(state_dict['model'], strict=False)
-        optimizer.load_state_dict(state_dict['optimizer'])
+    # optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
+    optimizer = optim.SGD(model.parameters(),
+                          lr=lr,
+                          momentum=0.9,
+                          weight_decay=5e-4,
+                          nesterov=True)
+    # lf = lambda x: 1 - x / epochs  # linear ramp to zero
+    # lf = lambda x: 10 ** (hyp['lrf'] * x / epochs)  # exp ramp
+    # lf = lambda x: 1 - 10 ** (hyp['lrf'] * (1 - x / epochs))  # inverse exp ramp
+    # scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
+    # scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=range(59, 70, 1), gamma=0.8)  # gradual fall to 0.1*lr0
+    scheduler = lr_scheduler.MultiStepLR(
+        optimizer,
+        milestones=[round(epochs * x) for x in [0.8, 0.9]],
+        gamma=0.1,
+        last_epoch=epoch - 1)
+    # summary(model, (3, img_size, img_size))
 
     # create dataset
     while epoch < epochs:
@@ -136,7 +152,6 @@ def train(data_dir,
         # Save checkpoint.
         state_dict = {
             'model': model.state_dict(),
-            'optimizer': optimizer.state_dict(),
             'miou': miou,
             'loss': val_loss,
             'epoch': epoch
@@ -154,6 +169,7 @@ def train(data_dir,
             print('\nSaving backup%d.pt..' % epoch)
             torch.save(state_dict, 'weights/backup%d.pt' % epoch)
         epoch += 1
+        scheduler.step()
 
 
 if __name__ == "__main__":
