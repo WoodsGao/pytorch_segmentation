@@ -86,7 +86,7 @@ def train(data_dir,
     model = model.to(device)
     # optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
     if adam:
-        optimizer = optim.Adam(model.parameters(), lr=lr)
+        optimizer = optim.AdamW(model.parameters(), lr=lr, amsgrad=True)
     else:
         optimizer = optim.SGD(
             model.parameters(),
