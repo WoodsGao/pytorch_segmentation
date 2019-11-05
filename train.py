@@ -150,8 +150,9 @@ def train(data_dir,
                 targets = targets.max(1)[1]
             outputs = model(inputs)
             loss = compute_loss(outputs, targets)
-            loss.backward()
             total_loss += loss.item()
+            loss *= batch_size / 64.
+            loss.backward()
             mem = torch.cuda.memory_cached() / 1E9 if torch.cuda.is_available(
             ) else 0  # (GB)
             pbar.set_description('train mem: %5.2lfGB loss: %8lf scale: %4d' %
