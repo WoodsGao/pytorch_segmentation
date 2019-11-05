@@ -4,9 +4,11 @@ import argparse
 from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 import torch.nn.functional as F
 import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
+from torchvision.utils import make_grid
 from models import DeepLabV3Plus
 from utils import device
 from utils import augments
@@ -15,8 +17,9 @@ from utils.datasets import SegmentationDataset, show_batch
 from utils.losses import compute_loss
 from test import test
 # from torchsummary import summary
-
+# from unet import UNet
 print(device)
+writer = SummaryWriter()
 # if torch.cuda.is_available():
 #     torch.backends.cudnn.benchmark = True
 
@@ -75,6 +78,7 @@ def train(data_dir,
     classes = train_loader.dataset.classes
     num_classes = len(classes)
     model = DeepLabV3Plus(num_classes)
+    # model = UNet(num_classes)
     model = model.to(device)
     if resume:
         state_dict = torch.load(weights, map_location=device)
@@ -83,23 +87,23 @@ def train(data_dir,
         epoch = state_dict['epoch']
         model.load_state_dict(state_dict['model'], strict=False)
     # optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
-    optimizer = optim.SGD(model.parameters(),
-                          lr=lr,
-                          momentum=0.9,
-                        #   weight_decay=5e-4,
-                          nesterov=True)
-    # optimizer = optim.Adam(model.parameters())
+    # optimizer = optim.SGD(model.parameters(),
+    #                       lr=lr,
+    #                       momentum=0.9,
+    #                     #   weight_decay=5e-4,
+    #                       nesterov=True)
+    optimizer = optim.Adam(model.parameters(), lr=lr)
     # lf = lambda x: 1 - x / epochs  # linear ramp to zero
     # lf = lambda x: 10 ** (hyp['lrf'] * x / epochs)  # exp ramp
     # lf = lambda x: 1 - 10 ** (hyp['lrf'] * (1 - x / epochs))  # inverse exp ramp
     # scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
     # scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=range(59, 70, 1), gamma=0.8)  # gradual fall to 0.1*lr0
-    scheduler = lr_scheduler.MultiStepLR(
-        optimizer,
-        milestones=[round(epochs * x) for x in [0.8, 0.9]],
-        gamma=0.1,
-    )
-    scheduler.last_epoch = epoch - 1
+    # scheduler = lr_scheduler.MultiStepLR(
+    #     optimizer,
+    #     milestones=[round(epochs * x) for x in [0.8, 0.9]],
+    #     gamma=0.1,
+    # )
+    # scheduler.last_epoch = epoch - 1
     # summary(model, (3, img_size, img_size))
 
     # create dataset
@@ -112,7 +116,9 @@ def train(data_dir,
         optimizer.zero_grad()
         for idx, (inputs, targets) in pbar:
             batch_idx = idx + 1
-            if idx == 0 and epoch == 0:
+            if idx == 0:
+                # if epoch == 0:
+                    # writer.add_graph(model, inputs)
                 show_batch('train_batch.png', inputs, targets, classes)
             inputs = inputs.to(device)
             targets = targets.to(device)
@@ -147,10 +153,13 @@ def train(data_dir,
                                                 img_size_max) * 32
 
             torch.cuda.empty_cache()
+        writer.add_scalar('train_loss', total_loss / len(train_loader), epoch)
         print('')
         # validate
         if not no_test:
             val_loss, miou = test(model, val_loader)
+        writer.add_scalar('valid_loss', val_loss, epoch)
+        writer.add_scalar('miou', miou, epoch)
         # Save checkpoint.
         state_dict = {
             'model': model.state_dict(),
@@ -171,7 +180,7 @@ def train(data_dir,
             print('\nSaving backup%d.pt..' % epoch)
             torch.save(state_dict, 'weights/backup%d.pt' % epoch)
         epoch += 1
-        scheduler.step()
+        # scheduler.step()
 
 
 if __name__ == "__main__":
@@ -199,6 +208,7 @@ if __name__ == "__main__":
         augments.V_Flap(0.1)
     ]
     opt = parser.parse_args()
+    print(opt)
     train(
         data_dir=opt.data_dir,
         epochs=opt.epochs,
