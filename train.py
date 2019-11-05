@@ -174,6 +174,7 @@ def train(data_dir,
             val_loss, miou = test(model, val_loader)
         writer.add_scalar('valid_loss', val_loss, epoch)
         writer.add_scalar('miou', miou, epoch)
+        epoch += 1
         # Save checkpoint.
         state_dict = {
             'model': model.state_dict(),
@@ -194,7 +195,7 @@ def train(data_dir,
         if epoch % 10 == 0 and epoch > 1:
             print('\nSaving backup%d.pt..' % epoch)
             torch.save(state_dict, 'weights/backup%d.pt' % epoch)
-        epoch += 1
+        
         # scheduler.step()
 
 
