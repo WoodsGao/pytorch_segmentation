@@ -9,7 +9,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
 from torchvision.utils import make_grid
-from models import DeepLabV3Plus
+from models import DeepLabV3Plus, UNet
 from utils import device
 from utils import augments
 from utils.optims import AdaBoundW
@@ -17,7 +17,7 @@ from utils.datasets import SegmentationDataset, show_batch
 from utils.losses import compute_loss
 from test import test
 # from torchsummary import summary
-# from unet import UNet
+
 print(device)
 writer = SummaryWriter()
 # if torch.cuda.is_available():
@@ -31,6 +31,8 @@ def train(data_dir,
           accumulate=2,
           lr=1e-3,
           resume=False,
+          unet=False,
+          adam=False,
           weights='',
           num_workers=0,
           augments_list=[],
@@ -77,22 +79,34 @@ def train(data_dir,
     epoch = 0
     classes = train_loader.dataset.classes
     num_classes = len(classes)
-    model = DeepLabV3Plus(num_classes)
-    # model = UNet(num_classes)
+    if unet:
+        model = UNet(num_classes)
+    else:
+        model = DeepLabV3Plus(num_classes)
     model = model.to(device)
+    # optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
+    if adam:
+        optimizer = optim.Adam(model.parameters(), lr=lr)
+    else:
+        optimizer = optim.SGD(
+            model.parameters(),
+            lr=lr,
+            momentum=0.9,
+            #   weight_decay=5e-4,
+            nesterov=True)
     if resume:
         state_dict = torch.load(weights, map_location=device)
+        if adam:
+            if 'adam' in state_dict:
+                optimizer.load_state_dict(state_dict['adam'])
+        elif 'sgd' in state_dict:
+            optimizer.load_state_dict(state_dict['sgd'])
+        optimizer.param_groups[0]['lr'] = lr
         best_miou = state_dict['miou']
         best_loss = state_dict['loss']
         epoch = state_dict['epoch']
         model.load_state_dict(state_dict['model'], strict=False)
-    # optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
-    # optimizer = optim.SGD(model.parameters(),
-    #                       lr=lr,
-    #                       momentum=0.9,
-    #                     #   weight_decay=5e-4,
-    #                       nesterov=True)
-    optimizer = optim.Adam(model.parameters(), lr=lr)
+
     # lf = lambda x: 1 - x / epochs  # linear ramp to zero
     # lf = lambda x: 10 ** (hyp['lrf'] * x / epochs)  # exp ramp
     # lf = lambda x: 1 - 10 ** (hyp['lrf'] * (1 - x / epochs))  # inverse exp ramp
@@ -118,7 +132,7 @@ def train(data_dir,
             batch_idx = idx + 1
             if idx == 0:
                 # if epoch == 0:
-                    # writer.add_graph(model, inputs)
+                # writer.add_graph(model, inputs)
                 show_batch('train_batch.png', inputs, targets, classes)
             inputs = inputs.to(device)
             targets = targets.to(device)
@@ -165,7 +179,8 @@ def train(data_dir,
             'model': model.state_dict(),
             'miou': miou,
             'loss': val_loss,
-            'epoch': epoch
+            'epoch': epoch,
+            'adam' if adam else 'sgd': optimizer.state_dict()
         }
         torch.save(state_dict, 'weights/last.pt')
         if val_loss < best_loss:
@@ -193,6 +208,8 @@ if __name__ == "__main__":
     parser.add_argument('--num-workers', type=int, default=0)
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--resume', action='store_true')
+    parser.add_argument('--unet', action='store_true')
+    parser.add_argument('--adam', action='store_true')
     parser.add_argument('--no-test', action='store_true')
     parser.add_argument('--weights', type=str, default='weights/last.pt')
     parser.add_argument('--multi-scale', action='store_true')
@@ -222,4 +239,6 @@ if __name__ == "__main__":
         augments_list=augments_list,
         multi_scale=opt.multi_scale,
         no_test=opt.no_test,
+        adam=opt.adam,
+        unet=opt.unet,
     )

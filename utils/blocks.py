@@ -3,7 +3,7 @@ import torch.nn as nn
 import math
 import torch.nn.functional as F
 
-relu = nn.LeakyReLU(0.1)
+relu = nn.LeakyReLU()
 bn = nn.BatchNorm2d
 
 
@@ -69,8 +69,7 @@ class Aspp(nn.Module):
         blocks.append(AsppPooling(in_channels, out_channels))
         self.blocks = nn.ModuleList(blocks)
         self.project = nn.Sequential(
-            DBL(out_channels * len(blocks), out_channels, 1),
-            nn.Dropout(0.5))
+            DBL(out_channels * len(blocks), out_channels, 1), nn.Dropout(0.5))
 
     def forward(self, x):
         outputs = []
@@ -258,7 +257,7 @@ class XBlock(nn.Module):
                  start_with_relu=True,
                  grow_first=True,
                  is_last=False,
-                 se_block=True):
+                 se_block=False):
         super(XBlock, self).__init__()
         if out_channels != in_channels or stride != 1:
             self.skip = nn.Sequential(
@@ -346,29 +345,31 @@ class XceptionBackbone(nn.Module):
             middle_block_dilation = 2
             exit_block_dilations = (2, 4)
         # Entry flow
-        self.pre_entry_flow = nn.Sequential(
+        self.conv1 = nn.Sequential(
             nn.Conv2d(3, 32, 3, 2, 1, bias=False),
             bn(32),
             relu,
             nn.Conv2d(32, 64, 3, 1, 1, bias=False),
             bn(64),
+            relu,
+        )
+        self.block1 = nn.Sequential(
             XBlock(64, 128, reps=2, stride=2, start_with_relu=False),
+            relu,
         )
-        self.post_entry_flow = nn.Sequential(
-            XBlock(128,
-                   256,
-                   reps=2,
-                   stride=2,
-                   start_with_relu=False,
-                   grow_first=True),
-            XBlock(256,
-                   728,
-                   reps=2,
-                   stride=entry_block3_stride,
-                   start_with_relu=True,
-                   grow_first=True,
-                   is_last=True),
-        )
+        self.block2 = XBlock(128,
+                             256,
+                             reps=2,
+                             stride=2,
+                             start_with_relu=False,
+                             grow_first=True)
+        self.block3 = XBlock(256,
+                             728,
+                             reps=2,
+                             stride=entry_block3_stride,
+                             start_with_relu=True,
+                             grow_first=True,
+                             is_last=True)
         # Middle flow
         middle_flow = list()
         for i in range(16):
@@ -392,15 +393,18 @@ class XceptionBackbone(nn.Module):
                    start_with_relu=True,
                    grow_first=False,
                    is_last=True),
+            relu,
             SeparableConv2d(1024, 1536, 3, 1,
                             dilation=exit_block_dilations[1]),
             bn(1536),
+            relu,
             SeparableConv2d(1536,
                             1536,
                             3,
                             stride=1,
                             dilation=exit_block_dilations[1]),
             bn(1536),
+            relu,
             SeparableConv2d(1536, 2048, 3, 1,
                             dilation=exit_block_dilations[1]),
             bn(2048),
@@ -408,8 +412,10 @@ class XceptionBackbone(nn.Module):
         )
 
     def forward(self, x):
-        x = self.pre_entry_flow(x)
-        x = self.post_entry_flow(x)
+        x = self.conv1(x)
+        x = self.block1(x)
+        x = self.block2(x)
+        x = self.block3(x)
         x = self.middle_flow(x)
         x = self.exit_flow(x)
         return x
