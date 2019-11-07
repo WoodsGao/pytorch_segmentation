@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 import os
 import torch
-from tqdm import tqdm
 from random import randint
 from threading import Thread
 from . import config

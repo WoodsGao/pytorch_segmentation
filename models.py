@@ -1,21 +1,19 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils.blocks import bn, relu, ResBlock, BLD, Aspp, AsppPooling, DenseBlock, XceptionBackbone, DBL
+from utils.modules.nn import Aspp, AsppPooling, Swish, BLD
+from utils.modules.backbones import DenseNet, ResNet
 import math
 
 
 class DeepLabV3Plus(nn.Module):
     def __init__(self, num_classes):
         super(DeepLabV3Plus, self).__init__()
-        self.backbone = XceptionBackbone(16)
-        self.aspp = Aspp(2048, 256, [12, 24, 36])
-        self.low_conv = DBL(128, 48)
+        self.backbone = DenseNet(16)
+        self.aspp = Aspp(1024, 128, [6, 18, 36])
         self.cls_conv = nn.Sequential(
-            DBL(304, 256, 3),
-            nn.Dropout(0.5),
-            DBL(256, 256, 3),
-            nn.Dropout(0.1),
+            nn.BatchNorm2d(256),
+            Swish(),
             nn.Conv2d(256, num_classes, 1),
         )
         # init weight and bias
@@ -28,13 +26,12 @@ class DeepLabV3Plus(nn.Module):
                 m.bias.data.zero_()
 
     def forward(self, x, var=None):
-        x = self.backbone.conv1(x)
         x = self.backbone.block1(x)
-        low = self.low_conv(x)
         x = self.backbone.block2(x)
+        low = x
         x = self.backbone.block3(x)
-        x = self.backbone.middle_flow(x)
-        x = self.backbone.exit_flow(x)
+        x = self.backbone.block4(x)
+        x = self.backbone.block5(x)
         x = self.aspp(x)
         x = F.interpolate(x,
                           scale_factor=4,
@@ -52,16 +49,13 @@ class DeepLabV3Plus(nn.Module):
 class UNet(nn.Module):
     def __init__(self, num_classes):
         super(UNet, self).__init__()
-        self.backbone = XceptionBackbone(16)
-        self.up_conv1 = DBL(2048, 256)
-        self.up_conv2 = DBL(512, 128)
-        self.up_conv3 = DBL(256, 64)
+        self.backbone = DenseNet(16)
+        self.up_conv1 = BLD(1024, 256)
+        self.up_conv2 = BLD(512, 128)
         self.cls_conv = nn.Sequential(
-            DBL(128, 128),
-            nn.Dropout(0.5),
-            DBL(128, 128),
-            nn.Dropout(0.1),
-            nn.Conv2d(128, num_classes, 1),
+            nn.BatchNorm2d(256),
+            Swish(),
+            nn.Conv2d(256, num_classes, 1),
         )
         # init weight and bias
         for m in self.modules():
@@ -72,16 +66,14 @@ class UNet(nn.Module):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
 
-    def forward(self, x, var=None):
-        x = self.backbone.conv1(x)
-        x1 = x
+    def forward(self, x):
         x = self.backbone.block1(x)
-        x2 = x
         x = self.backbone.block2(x)
-        x3 = x
+        x2 = x
         x = self.backbone.block3(x)
-        x = self.backbone.middle_flow(x)
-        x = self.backbone.exit_flow(x)
+        x3 = x
+        x = self.backbone.block4(x)
+        x = self.backbone.block5(x)
         x = self.up_conv1(x)
         x = F.interpolate(x,
                           scale_factor=2,
@@ -94,15 +86,9 @@ class UNet(nn.Module):
                           mode='bilinear',
                           align_corners=True)
         x = torch.cat([x, x2], 1)
-        x = self.up_conv3(x)
-        x = F.interpolate(x,
-                          scale_factor=2,
-                          mode='bilinear',
-                          align_corners=True)
-        x = torch.cat([x, x1], 1)
         x = self.cls_conv(x)
         x = F.interpolate(x,
-                          scale_factor=2,
+                          scale_factor=4,
                           mode='bilinear',
                           align_corners=True)
         return x
@@ -110,4 +96,4 @@ class UNet(nn.Module):
 
 if __name__ == "__main__":
     a = torch.ones([2, 3, 224, 224])
-    print(UNet(8)(a).shape)
+    print(DeepLabV3Plus(8)(a).shape)

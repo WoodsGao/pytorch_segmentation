@@ -3,7 +3,7 @@ from models import DeepLabV3Plus
 from torch.utils.data import DataLoader
 from utils.datasets import SegmentationDataset, show_batch
 from utils import augments
-from utils.losses import compute_loss
+from utils.utils import compute_loss
 from utils import device
 from tqdm import tqdm
 import argparse

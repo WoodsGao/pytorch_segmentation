@@ -12,9 +12,8 @@ from torchvision.utils import make_grid
 from models import DeepLabV3Plus, UNet
 from utils import device
 from utils import augments
-from utils.optims import AdaBoundW
 from utils.datasets import SegmentationDataset, show_batch
-from utils.losses import compute_loss
+from utils.utils import compute_loss
 from test import test
 # from torchsummary import summary
 
