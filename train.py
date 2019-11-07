@@ -17,6 +17,12 @@ from utils.utils import compute_loss
 from test import test
 # from torchsummary import summary
 
+mixed_precision = True
+try:  # Mixed precision training https://github.com/NVIDIA/apex
+    from apex import amp
+except:
+    mixed_precision = False  # not installed
+
 print(device)
 writer = SummaryWriter()
 # if torch.cuda.is_available():
@@ -118,7 +124,12 @@ def train(data_dir,
     # )
     # scheduler.last_epoch = epoch - 1
     # summary(model, (3, img_size, img_size))
-
+    # Mixed precision training https://github.com/NVIDIA/apex
+    if mixed_precision:
+        model, optimizer = amp.initialize(model,
+                                          optimizer,
+                                          opt_level='O1',
+                                          verbosity=0)
     # create dataset
     while epoch < epochs:
         print('%d/%d' % (epoch, epochs))
@@ -151,7 +162,12 @@ def train(data_dir,
             loss = compute_loss(outputs, targets)
             total_loss += loss.item()
             loss *= batch_size / 64.
-            loss.backward()
+            # Compute gradient
+            if mixed_precision:
+                with amp.scale_loss(loss, optimizer) as scaled_loss:
+                    scaled_loss.backward()
+            else:
+                loss.backward()
             mem = torch.cuda.memory_cached() / 1E9 if torch.cuda.is_available(
             ) else 0  # (GB)
             pbar.set_description('train mem: %5.2lfGB loss: %8lf scale: %4d' %
@@ -195,7 +211,7 @@ def train(data_dir,
         if epoch % 10 == 0 and epoch > 1:
             print('\nSaving backup%d.pt..' % epoch)
             torch.save(state_dict, 'weights/backup%d.pt' % epoch)
-        
+
         # scheduler.step()
 
 
