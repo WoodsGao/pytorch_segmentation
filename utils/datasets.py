@@ -4,7 +4,7 @@ import os
 import torch
 from random import randint
 from threading import Thread
-from . import config
+from .cvu import config
 
 
 class SegmentationDataset(torch.utils.data.Dataset):

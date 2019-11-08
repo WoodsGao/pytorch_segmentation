@@ -10,10 +10,9 @@ import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
 from torchvision.utils import make_grid
 from models import DeepLabV3Plus, UNet
-from utils import device
-from utils import augments
+from utils.cvu import augments
 from utils.datasets import SegmentationDataset, show_batch
-from utils.utils import compute_loss
+from utils.utils import compute_loss, device
 from test import test
 # from torchsummary import summary
 

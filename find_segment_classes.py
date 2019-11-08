@@ -1,7 +1,7 @@
 import os
 import cv2
 import numpy as np
-from utils import config
+from utils.cvu import config
 import argparse
 from tqdm import tqdm
 
