@@ -10,11 +10,12 @@ class DeepLabV3Plus(nn.Module):
     def __init__(self, num_classes):
         super(DeepLabV3Plus, self).__init__()
         self.backbone = DenseNet(16)
-        self.aspp = Aspp(1024, 128, [6, 18, 36])
+        self.aspp = Aspp(1024, 256, [6, 18, 36])
+        self.low_conv = BLD(128, 48, 1)
         self.cls_conv = nn.Sequential(
-            nn.BatchNorm2d(256),
+            nn.BatchNorm2d(304),
             Swish(),
-            nn.Conv2d(256, num_classes, 3, padding=1),
+            nn.Conv2d(304, num_classes, 3, padding=1),
         )
         # init weight and bias
         for m in self.modules():
@@ -28,7 +29,7 @@ class DeepLabV3Plus(nn.Module):
     def forward(self, x, var=None):
         x = self.backbone.block1(x)
         x = self.backbone.block2(x)
-        low = x
+        low = self.low_conv(x)
         x = self.backbone.block3(x)
         x = self.backbone.block4(x)
         x = self.backbone.block5(x)
