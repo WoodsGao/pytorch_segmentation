@@ -103,9 +103,6 @@ def train(data_dir,
         if adam:
             if 'adam' in state_dict:
                 optimizer.load_state_dict(state_dict['adam'])
-        elif 'sgd' in state_dict:
-            optimizer.load_state_dict(state_dict['sgd'])
-        optimizer.param_groups[0]['lr'] = lr
         best_miou = state_dict['miou']
         best_loss = state_dict['loss']
         epoch = state_dict['epoch']
@@ -195,9 +192,10 @@ def train(data_dir,
             'model': model.state_dict(),
             'miou': miou,
             'loss': val_loss,
-            'epoch': epoch,
-            'adam' if adam else 'sgd': optimizer.state_dict()
+            'epoch': epoch
         }
+        if adam:
+            state_dict['adam'] = optimizer.state_dict()
         torch.save(state_dict, 'weights/last.pt')
         if val_loss < best_loss:
             print('\nSaving best_loss.pt..')
