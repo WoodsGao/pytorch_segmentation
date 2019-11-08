@@ -49,7 +49,7 @@ def train(data_dir,
     train_dir = os.path.join(data_dir, 'train.txt')
     val_dir = os.path.join(data_dir, 'valid.txt')
     train_data = SegmentationDataset(train_dir,
-                                     'ttmp',
+                                     '/tmp/segttmp',
                                      cache_len=3000,
                                      img_size=img_size,
                                      augments=augments_list + [
@@ -64,7 +64,7 @@ def train(data_dir,
         num_workers=num_workers,
     )
     val_data = SegmentationDataset(val_dir,
-                                   'vtmp',
+                                   '/tmp/segvtmp',
                                    cache_len=3000,
                                    img_size=img_size,
                                    augments=[
