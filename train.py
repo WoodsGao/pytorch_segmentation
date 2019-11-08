@@ -181,7 +181,7 @@ def train(data_dir,
                     img_size = random.randrange(img_size_min,
                                                 img_size_max) * 32
 
-            torch.cuda.empty_cache()
+        torch.cuda.empty_cache()
         writer.add_scalar('train_loss', total_loss / len(train_loader), epoch)
         print('')
         # validate
