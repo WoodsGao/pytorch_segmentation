@@ -1,6 +1,3 @@
 [submodule "utils/modules"]
 	path = utils/modules
 	url = https://github.com/woodsgao/pytorch_modules.git
-[submodule "utils/cvu"]
-	path = utils/cvu
-	url = https://github.com/woodsgao/cv_utils.git

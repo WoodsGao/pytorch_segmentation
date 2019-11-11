@@ -15,7 +15,7 @@ class DeepLabV3Plus(nn.Module):
         self.cls_conv = nn.Sequential(
             nn.BatchNorm2d(304),
             Swish(),
-            nn.Conv2d(304, num_classes, 3, padding=1),
+            nn.Conv2d(304, num_classes - 1, 3, padding=1),
         )
         # init weight and bias
         for m in self.modules():

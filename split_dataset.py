@@ -1,6 +1,6 @@
 import os
 import random
-from utils.cvu import config
+from utils import config
 
 
 def run(data_dir, train_rate=0.7, shuffle=True):

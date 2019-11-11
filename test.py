@@ -1,9 +1,9 @@
 import torch
 from models import DeepLabV3Plus
 from torch.utils.data import DataLoader
-from utils.datasets import SegmentationDataset, show_batch
-from utils.cvu import augments
-from utils.utils import compute_loss, device
+from utils.modules.datasets import SegmentationDataset
+from utils.modules.augments import augments_parser
+from utils.utils import compute_loss, device, show_batch
 from tqdm import tqdm
 import argparse
 

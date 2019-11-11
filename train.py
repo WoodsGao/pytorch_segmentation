@@ -10,9 +10,9 @@ import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
 from torchvision.utils import make_grid
 from models import DeepLabV3Plus, UNet
-from utils.cvu import augments
-from utils.datasets import SegmentationDataset, show_batch
-from utils.utils import compute_loss, device
+from utils.modules.augments import augments_parser
+from utils.modules.datasets import SegmentationDataset
+from utils.utils import compute_loss, device, show_batch
 from test import test
 # from torchsummary import summary
 
@@ -39,7 +39,7 @@ def train(data_dir,
           adam=False,
           weights='',
           num_workers=0,
-          augments_list=[],
+          augments={},
           multi_scale=False,
           no_test=False):
     os.makedirs('weights', exist_ok=True)
@@ -50,28 +50,21 @@ def train(data_dir,
     val_dir = os.path.join(data_dir, 'valid.txt')
     train_data = SegmentationDataset(train_dir,
                                      '/tmp/segttmp',
-                                     cache_len=3000,
+                                     cache_len=1000,
                                      img_size=img_size,
-                                     augments=augments_list + [
-                                         augments.BGR2RGB(),
-                                         augments.Normalize(),
-                                         augments.NHWC2NCHW(),
-                                     ])
+                                     augments=augments)
     train_loader = DataLoader(
         train_data,
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
     )
-    val_data = SegmentationDataset(val_dir,
-                                   '/tmp/segvtmp',
-                                   cache_len=3000,
-                                   img_size=img_size,
-                                   augments=[
-                                       augments.BGR2RGB(),
-                                       augments.Normalize(),
-                                       augments.NHWC2NCHW(),
-                                   ])
+    val_data = SegmentationDataset(
+        val_dir,
+        '/tmp/segvtmp',
+        cache_len=1000,
+        img_size=img_size,
+    )
     val_loader = DataLoader(
         val_data,
         batch_size=batch_size,
@@ -90,7 +83,7 @@ def train(data_dir,
     model = model.to(device)
     # optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
     if adam:
-        optimizer = optim.AdamW(model.parameters(), lr=lr, amsgrad=True)
+        optimizer = optim.Adam(model.parameters(), lr=lr, amsgrad=True)
     else:
         optimizer = optim.SGD(
             model.parameters(),
@@ -227,17 +220,11 @@ if __name__ == "__main__":
     parser.add_argument('--no-test', action='store_true')
     parser.add_argument('--weights', type=str, default='weights/last.pt')
     parser.add_argument('--multi-scale', action='store_true')
-    augments_list = [
-        augments.PerspectiveProject(0.3, 0.1),
-        augments.HSV_H(0.01, 0.1),
-        augments.HSV_S(0.7, 0.1),
-        augments.HSV_V(0.4, 0.1),
-        augments.Rotate(1, 0.1),
-        augments.Blur(0.02, 0.1),
-        augments.Noise(0.05, 0.1),
-        augments.H_Flap(0.1),
-        augments.V_Flap(0.1)
-    ]
+    augments = {
+        'hsv': 0,
+        'blur': 0,
+        'pepper': 1,
+    }
     opt = parser.parse_args()
     print(opt)
     train(
@@ -250,7 +237,7 @@ if __name__ == "__main__":
         resume=opt.resume,
         weights=opt.weights,
         num_workers=opt.num_workers,
-        augments_list=augments_list,
+        augments=augments,
         multi_scale=opt.multi_scale,
         no_test=opt.no_test,
         adam=opt.adam,
