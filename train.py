@@ -224,8 +224,14 @@ if __name__ == "__main__":
         'hsv': 0,
         'blur': 0,
         'pepper': 1,
+        'shear': 1,
+        'translate': 1,
+        # 'rotate': 1,
+        'flip': 1,
+        'scale': 1,
     }
     opt = parser.parse_args()
+    augments['size'] = opt.img_size
     print(opt)
     train(
         data_dir=opt.data_dir,
