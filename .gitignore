@@ -16,6 +16,7 @@ core/
 *.png
 ttmp/
 vtmp/
+outputs/
 # Distribution / packaging
 .Python
 build/
