@@ -1,0 +1,6 @@
+opencv-python>=3.3
+numpy>=1.11
+torch>=1.0
+tqdm
+tensorflow
+tensorboard

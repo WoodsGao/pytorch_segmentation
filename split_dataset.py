@@ -1,5 +1,6 @@
 import os
 import random
+import sys
 
 
 def run(data_dir, train_rate=0.7, shuffle=True):
@@ -30,4 +31,7 @@ def run(data_dir, train_rate=0.7, shuffle=True):
 
 
 if __name__ == "__main__":
-    run('data/tt100k')
+    data_dir = 'data/voc'
+    if len(sys.argv) > 1:
+        data_dir = sys.argv[1]
+    run(data_dir)
