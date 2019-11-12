@@ -8,6 +8,7 @@ Implementation of some semantic segmentation models with pytorch, including Deep
 
  - Advanced neural network models
  - Flexible and efficient toolkit(See [woodsgao/pytorch_modules](https://github.com/woodsgao/pytorch_modules))
+ - Mixed precision training(If you have already installed [apex](https://github.com/NVIDIA/apex))
 
 ## Installation
 
