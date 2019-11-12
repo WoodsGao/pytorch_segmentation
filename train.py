@@ -221,17 +221,17 @@ if __name__ == "__main__":
     parser.add_argument('--weights', type=str, default='weights/last.pt')
     parser.add_argument('--multi-scale', action='store_true')
     augments = {
-        'hsv': 0,
-        'blur': 0,
-        'pepper': 1,
-        'shear': 1,
-        'translate': 1,
-        # 'rotate': 1,
-        'flip': 1,
-        'scale': 1,
+        # 'hsv': 0.1,
+        # 'blur': 0.1,
+        # 'pepper': 0.1,
+        # 'shear': 0.1,
+        # 'translate': 0.1,
+        # 'rotate': 0.1,
+        # 'flip': 0.1,
+        # 'scale': 0.1,
+        # 'noise': 0.1,
     }
     opt = parser.parse_args()
-    augments['size'] = opt.img_size
     print(opt)
     train(
         data_dir=opt.data_dir,

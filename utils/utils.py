@@ -20,26 +20,17 @@ def compute_loss(outputs, targets):
 
 
 def show_batch(save_path, inputs, targets, classes):
-    inputs = inputs.clone()
-    targets = targets.clone()
-    imgs = []
-    segs = []
-    for bi, (img, seg) in enumerate(zip(inputs, targets)):
-        img *= 255.
-        img.clamp(0, 255)
-        img = img.long().numpy().transpose(1, 2, 0)
-        seg = seg.numpy()
-        seg_rgb = np.zeros_like(img, dtype=np.uint8)
-        for ci, (cn, color) in enumerate(classes):
-            seg_rgb[seg == ci] = color
+    imgs = inputs.clone()
+    segs = targets.clone()
+    imgs *= 255.
+    imgs = imgs.clamp(0, 255).permute(0, 2, 3, 1).long().numpy()[:, :, :, ::-1]
+    segs = segs.numpy()
+    seg_rgb = np.zeros_like(imgs, dtype=np.uint8)
+    for ci, (cn, color) in enumerate(classes):
+        seg_rgb[segs == ci] = color
+    segs = seg_rgb
+    imgs = imgs.reshape(-1, imgs.shape[2], imgs.shape[3])
+    segs = segs.reshape(-1, segs.shape[2], segs.shape[3])
 
-        img = img[:, :, ::-1]
-
-        imgs.append(img)
-        segs.append(seg_rgb)
-
-    imgs = np.concatenate(imgs, 1)
-    segs = np.concatenate(segs, 1)
-
-    save_img = np.concatenate([imgs, segs], 0)
+    save_img = np.concatenate([imgs, segs], 1)
     cv2.imwrite(save_path, save_img)

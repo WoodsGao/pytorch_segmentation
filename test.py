@@ -2,7 +2,6 @@ import torch
 from models import DeepLabV3Plus
 from torch.utils.data import DataLoader
 from utils.modules.datasets import SegmentationDataset
-from utils.modules.augments import augments_parser
 from utils.utils import compute_loss, device, show_batch
 from tqdm import tqdm
 import argparse
@@ -80,12 +79,7 @@ if __name__ == "__main__":
     opt = parser.parse_args()
 
     val_data = SegmentationDataset(opt.val_list,
-                                   img_size=opt.img_size,
-                                   augments=[
-                                       augments.BGR2RGB(),
-                                       augments.Normalize(),
-                                       augments.NHWC2NCHW(),
-                                   ])
+                                   img_size=opt.img_size)
     val_loader = DataLoader(
         val_data,
         batch_size=opt.batch_size,
