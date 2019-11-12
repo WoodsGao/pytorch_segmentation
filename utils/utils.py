@@ -20,8 +20,8 @@ def compute_loss(outputs, targets):
 
 
 def show_batch(save_path, inputs, targets, classes):
-    imgs = inputs.clone()
-    segs = targets.clone()
+    imgs = inputs.clone()[:8]
+    segs = targets.clone()[:8]
     imgs *= 255.
     imgs = imgs.clamp(0, 255).permute(0, 2, 3, 1).long().numpy()[:, :, :, ::-1]
     segs = segs.numpy()
