@@ -219,15 +219,15 @@ if __name__ == "__main__":
     parser.add_argument('--weights', type=str, default='weights/last.pt')
     parser.add_argument('--multi-scale', action='store_true')
     augments = {
-        'hsv': 0.05,
-        'blur': 0.05,
-        'pepper': 0.05,
-        'shear': 0.05,
-        'translate': 0.05,
-        'rotate': 0.05,
-        'flip': 0.05,
-        'scale': 0.05,
-        'noise': 0.05,
+        'hsv': 0.1,
+        'blur': 0.1,
+        'pepper': 0.1,
+        'shear': 0.1,
+        'translate': 0.1,
+        'rotate': 0.1,
+        'flip': 0.1,
+        'scale': 0.1,
+        'noise': 0.1,
     }
     opt = parser.parse_args()
     print(opt)
