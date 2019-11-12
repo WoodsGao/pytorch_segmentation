@@ -8,9 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 import torch.nn.functional as F
 import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
-from torchvision.utils import make_grid
 from models import DeepLabV3Plus, UNet
-from utils.modules.augments import augments_parser
 from utils.modules.datasets import SegmentationDataset
 from utils.utils import compute_loss, device, show_batch
 from test import test
@@ -112,7 +110,9 @@ def train(data_dir,
     #     gamma=0.1,
     # )
     # scheduler.last_epoch = epoch - 1
+
     # summary(model, (3, img_size, img_size))
+
     # Mixed precision training https://github.com/NVIDIA/apex
     if mixed_precision:
         model, optimizer = amp.initialize(model,
@@ -130,8 +130,6 @@ def train(data_dir,
         for idx, (inputs, targets) in pbar:
             batch_idx = idx + 1
             if idx == 0:
-                # if epoch == 0:
-                # writer.add_graph(model, inputs)
                 show_batch('train_batch.png', inputs, targets, classes)
             inputs = inputs.to(device)
             targets = targets.to(device)
@@ -221,15 +219,15 @@ if __name__ == "__main__":
     parser.add_argument('--weights', type=str, default='weights/last.pt')
     parser.add_argument('--multi-scale', action='store_true')
     augments = {
-        'hsv': 0.1,
-        'blur': 0.1,
-        'pepper': 0.1,
-        'shear': 0.1,
-        'translate': 0.1,
-        'rotate': 0.1,
-        'flip': 0.1,
-        'scale': 0.1,
-        'noise': 0.1,
+        'hsv': 0.05,
+        'blur': 0.05,
+        'pepper': 0.05,
+        'shear': 0.05,
+        'translate': 0.05,
+        'rotate': 0.05,
+        'flip': 0.05,
+        'scale': 0.05,
+        'noise': 0.05,
     }
     opt = parser.parse_args()
     print(opt)
