@@ -75,9 +75,9 @@ def train(data_dir,
     classes = train_loader.dataset.classes
     num_classes = len(classes)
     if unet:
-        model = UNet(num_classes)
+        model = UNet(30)
     else:
-        model = DeepLabV3Plus(num_classes)
+        model = DeepLabV3Plus(30)
     model = model.to(device)
     # optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
     if adam:

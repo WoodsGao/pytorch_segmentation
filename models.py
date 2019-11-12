@@ -97,4 +97,4 @@ class UNet(nn.Module):
 
 if __name__ == "__main__":
     a = torch.ones([2, 3, 224, 224])
-    print(DeepLabV3Plus(8)(a).shape)
+    print(DeepLabV3Plus(30)(a).shape)

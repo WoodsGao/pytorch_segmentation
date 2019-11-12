@@ -45,3 +45,11 @@ Then execute `python3 split_dataset.py data/<custom>`.It splits the data into tr
 ### Training
 
     python3 train.py --data-dir data/<custom> --img-size 512 --batch-size 8 --accumulate 8 --epoch 200 --lr 1e-4 --adam
+
+### Testing
+
+    python3 test.py --val-list /data/<custom>/valid.txt --img-size 224 --batch-size 8 --weights weights/best_miou.pt
+
+### Inference
+
+    python3 inference.py --img-dir data/samples --classes data/samples/classes.names --img-size 256 --output_dir outputs --weights weights/best_miou.pt

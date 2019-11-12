@@ -1,5 +1,5 @@
 import torch
-from models import DeepLabV3Plus
+from models import DeepLabV3Plus, UNet
 from torch.utils.data import DataLoader
 from utils.modules.datasets import SegmentationDataset
 from utils.utils import compute_loss, device, show_batch
@@ -75,6 +75,7 @@ if __name__ == "__main__":
     parser.add_argument('--img-size', type=int, default=224)
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--weights', type=str, default='')
+    parser.add_argument('--unet', action='store_true')
     parser.add_argument('--num-workers', type=int, default=0)
     opt = parser.parse_args()
 
@@ -88,7 +89,10 @@ if __name__ == "__main__":
     )
     classes = val_loader.dataset.classes
     num_classes = len(classes)
-    model = DeepLabV3Plus(num_classes)
+    if opt.unet:
+        model = UNet(30)
+    else:
+        model = DeepLabV3Plus(30)
     model = model.to(device)
     if opt.weights:
         state_dict = torch.load(opt.weights, map_location=device)
