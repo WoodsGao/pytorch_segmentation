@@ -135,6 +135,7 @@ def train(data_dir,
             inputs = inputs.to(device)
             targets = targets.to(device)
             if multi_scale and (inputs.size(3) != img_size):
+                img_size = random.randrange(img_size_min, img_size_max) * 32
                 inputs = F.interpolate(inputs,
                                        size=img_size,
                                        mode='bilinear',
@@ -164,11 +165,6 @@ def train(data_dir,
                     batch_idx == len(train_loader):
                 optimizer.step()
                 optimizer.zero_grad()
-
-                # multi scale
-                if multi_scale:
-                    img_size = random.randrange(img_size_min,
-                                                img_size_max) * 32
 
         torch.cuda.empty_cache()
         writer.add_scalar('train_loss', total_loss / len(train_loader), epoch)
