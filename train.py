@@ -10,6 +10,7 @@ import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
 from models import DeepLabV3Plus, UNet
 from utils.modules.datasets import SegmentationDataset
+from utils.modules.optim import AdaBoundW
 from utils.utils import compute_loss, device, show_batch
 from test import test
 # from torchsummary import summary
@@ -81,7 +82,7 @@ def train(data_dir,
     model = model.to(device)
     # optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
     if adam:
-        optimizer = optim.Adam(model.parameters(), lr=lr, amsgrad=True)
+        optimizer = optim.AdaBoundW(model.parameters(), lr=lr, weight_decay=lr * 1e-3)
     else:
         optimizer = optim.SGD(
             model.parameters(),
