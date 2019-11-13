@@ -134,7 +134,7 @@ def train(data_dir,
                 show_batch('train_batch.png', inputs, targets, classes)
             inputs = inputs.to(device)
             targets = targets.to(device)
-            if multi_scale:
+            if multi_scale and (inputs.size(3) != img_size):
                 inputs = F.interpolate(inputs,
                                        size=img_size,
                                        mode='bilinear',
