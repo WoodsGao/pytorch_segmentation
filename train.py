@@ -10,7 +10,7 @@ import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
 from models import DeepLabV3Plus, UNet
 from utils.modules.datasets import SegmentationDataset
-from utils.modules.optim import AdaBoundW
+from utils.modules.optims import AdaBoundW
 from utils.utils import compute_loss, device, show_batch
 from test import test
 # from torchsummary import summary
