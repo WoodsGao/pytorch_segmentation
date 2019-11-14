@@ -56,6 +56,7 @@ def train(data_dir,
         train_data,
         batch_size=batch_size,
         shuffle=True,
+        pin_memory=True, 
         num_workers=num_workers,
     )
     val_data = SegmentationDataset(
@@ -67,6 +68,7 @@ def train(data_dir,
         val_data,
         batch_size=batch_size,
         shuffle=True,
+        pin_memory=True, 
         num_workers=num_workers,
     )
     best_miou = 0
