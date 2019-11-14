@@ -49,8 +49,6 @@ def train(data_dir,
     train_dir = os.path.join(data_dir, 'train.txt')
     val_dir = os.path.join(data_dir, 'valid.txt')
     train_data = SegmentationDataset(train_dir,
-                                     '/tmp/segttmp',
-                                     cache_len=3000,
                                      img_size=img_size,
                                      augments=augments)
     train_loader = DataLoader(
@@ -61,8 +59,6 @@ def train(data_dir,
     )
     val_data = SegmentationDataset(
         val_dir,
-        '/tmp/segvtmp',
-        cache_len=3000,
         img_size=img_size,
     )
     val_loader = DataLoader(
@@ -164,8 +160,8 @@ def train(data_dir,
             mem = torch.cuda.memory_cached() / 1E9 if torch.cuda.is_available(
             ) else 0  # (GB)
             pbar.set_description(
-                'train mem: %5.2lfGB loss: %8lf scale: %4d loadtime %8lf' %
-                (mem, total_loss / batch_idx, inputs.size(2), t1 - t0))
+                'train mem: %5.2lfGB loss: %8lf scale: %4d' %
+                (mem, total_loss / batch_idx, inputs.size(2)))
             if batch_idx % accumulate == 0 or \
                     batch_idx == len(train_loader):
                 optimizer.step()
