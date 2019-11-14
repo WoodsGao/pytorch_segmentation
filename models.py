@@ -13,7 +13,7 @@ class DeepLabV3Plus(nn.Module):
         self.aspp = Aspp(1024, 256, [6, 18, 36])
         self.low_conv = BLD(128, 64, 1)
         self.cls_conv = nn.Sequential(
-            nn.BatchNorm2d(320),
+            nn.GroupNorm(32, 320),
             Swish(),
             nn.Conv2d(320, num_classes, 3, padding=1),
         )
@@ -22,7 +22,7 @@ class DeepLabV3Plus(nn.Module):
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
                 m.weight.data.normal_(0, math.sqrt(2. / n))
-            elif isinstance(m, nn.BatchNorm2d):
+            elif isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.GroupNorm):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
 
