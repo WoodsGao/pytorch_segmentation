@@ -40,7 +40,7 @@ def train(data_dir,
           num_workers=0,
           augments={},
           multi_scale=False,
-          no_test=False):
+          notest=False):
     os.makedirs('weights', exist_ok=True)
     if multi_scale:
         img_size_min = max(img_size * 0.67 // 32, 1)
@@ -171,10 +171,12 @@ def train(data_dir,
         writer.add_scalar('train_loss', total_loss / len(train_loader), epoch)
         print('')
         # validate
-        if not no_test:
+        val_loss = best_loss
+        miou = best_miou
+        if not notest:
             val_loss, miou = test(model, val_loader)
-        writer.add_scalar('valid_loss', val_loss, epoch)
-        writer.add_scalar('miou', miou, epoch)
+            writer.add_scalar('valid_loss', val_loss, epoch)
+            writer.add_scalar('miou', miou, epoch)
         epoch += 1
         # Save checkpoint.
         state_dict = {
@@ -213,7 +215,7 @@ if __name__ == "__main__":
     parser.add_argument('--resume', action='store_true')
     parser.add_argument('--unet', action='store_true')
     parser.add_argument('--adam', action='store_true')
-    parser.add_argument('--no-test', action='store_true')
+    parser.add_argument('--notest', action='store_true')
     parser.add_argument('--weights', type=str, default='weights/last.pt')
     parser.add_argument('--multi-scale', action='store_true')
     augments = {
@@ -241,7 +243,7 @@ if __name__ == "__main__":
         num_workers=opt.num_workers,
         augments=augments,
         multi_scale=opt.multi_scale,
-        no_test=opt.no_test,
+        notest=opt.notest,
         adam=opt.adam,
         unet=opt.unet,
     )
