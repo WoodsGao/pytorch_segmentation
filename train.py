@@ -83,13 +83,13 @@ def train(data_dir,
     model = model.to(device)
     # optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
     if adam:
-        optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
+        optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4, eps=1e-4)
     else:
         optimizer = optim.SGD(
             model.parameters(),
             lr=lr,
             momentum=0.9,
-            #   weight_decay=5e-4,
+            weight_decay=5e-4,
             nesterov=True)
     if resume:
         state_dict = torch.load(weights, map_location=device)

@@ -4,8 +4,8 @@ import numpy as np
 import cv2
 
 
-CE = nn.CrossEntropyLoss(reduction='none')
-BCE = nn.BCEWithLogitsLoss(reduction='none')
+CE = nn.CrossEntropyLoss()
+BCE = nn.BCEWithLogitsLoss()
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
@@ -14,7 +14,7 @@ def compute_loss(outputs, targets):
     # weights = torch.pow(cls_loss, 1.1)
     # weights = weights / weights.max()
     # cls_loss = cls_loss * weights
-    cls_loss = cls_loss.mean()
+    # cls_loss = cls_loss.mean()
     loss = cls_loss
     return loss
 
