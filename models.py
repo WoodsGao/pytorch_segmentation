@@ -10,8 +10,8 @@ class DeepLabV3Plus(nn.Module):
     def __init__(self, num_classes):
         super(DeepLabV3Plus, self).__init__()
         self.backbone = ResNet(16)
-        self.aspp = Aspp(2048, 256, [6, 18, 36])
-        self.low_conv = BLD(256, 64, 1)
+        self.aspp = Aspp(1024, 256, [6, 18, 36])
+        self.low_conv = BLD(128, 64, 1)
         self.cls_conv = nn.Sequential(
             nn.GroupNorm(32, 320),
             Swish(),
@@ -51,8 +51,8 @@ class UNet(nn.Module):
     def __init__(self, num_classes):
         super(UNet, self).__init__()
         self.backbone = ResNet(16)
-        self.up_conv1 = BLD(2048, 256)
-        self.up_conv2 = BLD(1024, 128)
+        self.up_conv1 = BLD(1024, 256)
+        self.up_conv2 = BLD(512, 128)
         self.cls_conv = nn.Sequential(
             nn.GroupNorm(32, 256),
             Swish(),
