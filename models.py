@@ -9,8 +9,8 @@ import math
 class DeepLabV3Plus(nn.Module):
     def __init__(self, num_classes):
         super(DeepLabV3Plus, self).__init__()
-        self.backbone = ResNet(16)
-        self.aspp = Aspp(1024, 256, [6, 18, 36])
+        self.backbone = DenseNet(8)
+        self.aspp = Aspp(1024, 256, [12, 24, 36])
         self.low_conv = BLD(128, 64, 1)
         self.cls_conv = nn.Sequential(
             nn.GroupNorm(32, 320),
@@ -35,7 +35,7 @@ class DeepLabV3Plus(nn.Module):
         x = self.backbone.block5(x)
         x = self.aspp(x)
         x = F.interpolate(x,
-                          scale_factor=4,
+                          scale_factor=2,
                           mode='bilinear',
                           align_corners=True)
         x = torch.cat([x, low], 1)
@@ -50,7 +50,7 @@ class DeepLabV3Plus(nn.Module):
 class UNet(nn.Module):
     def __init__(self, num_classes):
         super(UNet, self).__init__()
-        self.backbone = ResNet(16)
+        self.backbone = Dense(16)
         self.up_conv1 = BLD(1024, 256)
         self.up_conv2 = BLD(512, 128)
         self.cls_conv = nn.Sequential(
