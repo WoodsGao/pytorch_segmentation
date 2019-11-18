@@ -35,7 +35,7 @@ class DeepLabV3Plus(nn.Module):
         x = self.backbone.block5(x)
         x = self.aspp(x)
         x = F.interpolate(x,
-                          scale_factor=4,
+                          scale_factor=2,
                           mode='bilinear',
                           align_corners=True)
         x = torch.cat([x, low], 1)
@@ -50,11 +50,17 @@ class DeepLabV3Plus(nn.Module):
 class UNet(nn.Module):
     def __init__(self, num_classes):
         super(UNet, self).__init__()
+<<<<<<< HEAD
         self.backbone = DenseNet(16)
         self.up_conv1 = NSC(1024, 256)
         self.up_conv2 = NSC(512, 128)
+=======
+        self.backbone = Dense(16)
+        self.up_conv1 = BLD(1024, 256)
+        self.up_conv2 = BLD(512, 128)
+>>>>>>> bc8e130fe6ef2df7289bb59fec042ccad7bec48d
         self.cls_conv = nn.Sequential(
-            nn.BatchNorm2d(256),
+            nn.GroupNorm(32, 256),
             Swish(),
             nn.Conv2d(256, num_classes, 1),
         )
