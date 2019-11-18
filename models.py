@@ -14,9 +14,7 @@ class DeepLabV3Plus(nn.Module):
         self.low_conv = CNS(24, 48, 3)
         self.cls_conv = nn.Sequential(
             CNS(304, 256, 3), 
-            DropConnect(0.5),
             CNS(256, 256, 3),
-            DropConnect(0.1), 
             nn.Conv2d(256, num_classes, 1)
         )
         # init weight and bias
