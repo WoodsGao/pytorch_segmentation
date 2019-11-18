@@ -88,6 +88,6 @@ class UNet(nn.Module):
 
 if __name__ == "__main__":
     a = torch.ones([2, 3, 224, 224])
-    o =DeepLabV3Plus(30)(a)
+    o = DeepLabV3Plus(30)(a)
     print(o.shape)
     o.mean().backward()
