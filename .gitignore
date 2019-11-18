@@ -8,7 +8,7 @@ __pycache__/
 
 # tensorboard
 runs/
-
+tmp/
 weights/
 .vscode/
 data/
