@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils.modules.nn import Aspp, AsppPooling, Swish, CNS
+from utils.modules.nn import Aspp, AsppPooling, Swish, CNS, DropConnect
 from utils.modules.backbones import DenseNet, ResNet, EfficientNetB2, EfficientNetB4
 import math
 
@@ -10,8 +10,15 @@ class DeepLabV3Plus(nn.Module):
     def __init__(self, num_classes):
         super(DeepLabV3Plus, self).__init__()
         self.backbone = EfficientNetB2(16)
-        self.aspp = Aspp(352, 128, [6, 18, 36])
-        self.cls_conv = nn.Conv2d(152, num_classes, 3, padding=1)
+        self.aspp = Aspp(352, 256, [6, 18, 36])
+        self.low_conv = CNS(24, 48, 3)
+        self.cls_conv = nn.Sequential(
+            CNS(304, 256, 3), 
+            DropConnect(0.5),
+            CNS(256, 256, 3),
+            DropConnect(0.1), 
+            nn.Conv2d(256, num_classes, 1)
+        )
         # init weight and bias
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -24,7 +31,7 @@ class DeepLabV3Plus(nn.Module):
     def forward(self, x):
         x = self.backbone.block1(x)
         x = self.backbone.block2(x)
-        low = x
+        low = self.low_conv(x)
         x = self.backbone.block3(x)
         x = self.backbone.block4(x)
         x = self.backbone.block5(x)
