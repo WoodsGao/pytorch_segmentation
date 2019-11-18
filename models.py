@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils.modules.nn import Aspp, AsppPooling, Swish, BLD
+from utils.modules.nn import Aspp, AsppPooling, Swish, NSC
 from utils.modules.backbones import DenseNet, ResNet
 import math
 
@@ -11,7 +11,7 @@ class DeepLabV3Plus(nn.Module):
         super(DeepLabV3Plus, self).__init__()
         self.backbone = DenseNet(16)
         self.aspp = Aspp(1024, 256, [6, 18, 36])
-        self.low_conv = BLD(128, 64, 1)
+        self.low_conv = NSC(128, 64, 1)
         self.cls_conv = nn.Sequential(
             nn.GroupNorm(32, 320),
             Swish(),
@@ -51,8 +51,8 @@ class UNet(nn.Module):
     def __init__(self, num_classes):
         super(UNet, self).__init__()
         self.backbone = DenseNet(16)
-        self.up_conv1 = BLD(1024, 256)
-        self.up_conv2 = BLD(512, 128)
+        self.up_conv1 = NSC(1024, 256)
+        self.up_conv2 = NSC(512, 128)
         self.cls_conv = nn.Sequential(
             nn.BatchNorm2d(256),
             Swish(),
