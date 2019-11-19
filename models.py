@@ -10,12 +10,10 @@ class DeepLabV3Plus(nn.Module):
     def __init__(self, num_classes):
         super(DeepLabV3Plus, self).__init__()
         self.backbone = EfficientNetB2(16)
-        self.aspp = Aspp(352, 256, [6, 18, 36])
-        self.low_conv = CNS(24, 48, 3)
+        self.aspp = Aspp(352, 128, [6, 12, 18])
+        self.low_conv = CNS(24, 128, 3)
         self.cls_conv = nn.Sequential(
-            CNS(304, 256, 3), 
-            CNS(256, 256, 3),
-            nn.Conv2d(256, num_classes, 1)
+            nn.Conv2d(256, num_classes, 3, padding=1)
         )
         # init weight and bias
         for m in self.modules():
