@@ -1,11 +1,11 @@
 import os
 import cv2
 import numpy as np
-import argparse
+import sys
 from tqdm import tqdm
 
 
-def find_segment_classes(data_dir):
+def run(data_dir):
     classes = np.zeros([0, 3])
     names = os.listdir(os.path.join(data_dir, 'labels'))
     names = [
@@ -26,7 +26,7 @@ def find_segment_classes(data_dir):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-p', '--path', default='data/voc')
-    args = parser.parse_args()
-    find_segment_classes(args.path)
+    data_dir = 'data/voc'
+    if len(sys.argv) > 1:
+        data_dir = sys.argv[1]
+    run(data_dir)
