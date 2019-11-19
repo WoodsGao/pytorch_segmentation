@@ -152,7 +152,7 @@ def train(data_dir,
             outputs = model(inputs)
             loss = compute_loss(outputs, targets)
             total_loss += loss.item()
-            loss *= batch_size / 64.
+            loss /= accumulate
             # Compute gradient
             if mixed_precision:
                 with amp.scale_loss(loss, optimizer) as scaled_loss:
