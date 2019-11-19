@@ -69,6 +69,7 @@ def train(data_dir,
         pin_memory=True, 
         num_workers=num_workers,
     )
+    accumulate_count = 0
     best_miou = 0
     best_loss = 1000
     epoch = 0
@@ -159,12 +160,13 @@ def train(data_dir,
                     scaled_loss.backward()
             else:
                 loss.backward()
+            accumulate_count += 1
             mem = torch.cuda.memory_cached() / 1E9 if torch.cuda.is_available(
             ) else 0  # (GB)
             pbar.set_description('train mem: %5.2lfGB loss: %8lf scale: %4d' %
                                  (mem, total_loss / batch_idx, inputs.size(2)))
-            if batch_idx % accumulate == 0 or \
-                    batch_idx == len(train_loader):
+            if accumulate_count % accumulate == 0:
+                accumulate_count = 0
                 optimizer.step()
                 optimizer.zero_grad()
             t0 = time()
