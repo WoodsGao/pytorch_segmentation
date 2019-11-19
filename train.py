@@ -169,6 +169,7 @@ def train(data_dir,
                 accumulate_count = 0
                 optimizer.step()
                 optimizer.zero_grad()
+                model.weight_standard()
             t0 = time()
         torch.cuda.empty_cache()
         writer.add_scalar('train_loss', total_loss / len(train_loader), epoch)
