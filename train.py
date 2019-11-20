@@ -13,7 +13,6 @@ from utils.modules.datasets import SegmentationDataset
 from utils.modules.optims import AdaBoundW
 from utils.utils import compute_loss, device, show_batch
 from test import test
-from time import time
 # from torchsummary import summary
 
 mixed_precision = True
@@ -128,9 +127,9 @@ def train(data_dir,
         total_loss = 0
         pbar = tqdm(enumerate(train_loader), total=len(train_loader))
         optimizer.zero_grad()
-        t0 = time()
         for idx, (inputs, targets) in pbar:
-            t1 = time()
+            if inputs.size(0) < 2:
+                continue
             batch_idx = idx + 1
             if idx == 0:
                 show_batch('train_batch.png', inputs, targets, classes)
@@ -170,7 +169,6 @@ def train(data_dir,
                 optimizer.step()
                 optimizer.zero_grad()
                 model.weight_standard()
-            t0 = time()
         torch.cuda.empty_cache()
         writer.add_scalar('train_loss', total_loss / len(train_loader), epoch)
         print('')
