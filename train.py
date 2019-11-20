@@ -173,7 +173,7 @@ def train(data_dir,
                                  (mem, total_loss / batch_idx, inputs.size(2)))
             if accumulate_count % accumulate == 0:
                 accumulate_count = 0
-                torch.nn.utils.clip_grad_norm(model.parameters(), 10)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 10)
                 optimizer.step()
                 optimizer.zero_grad()
                 model.weight_standard()
