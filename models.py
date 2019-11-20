@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils.modules.nn import Aspp, AsppPooling, Swish, CNS, DropConnect
+from utils.modules.nn import Aspp, AsppPooling, Swish, CNS
 from utils.modules.backbones import BasicModel, DenseNet, ResNet, EfficientNetB2, EfficientNetB4
 import math
 
