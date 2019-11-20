@@ -225,7 +225,7 @@ if __name__ == "__main__":
     parser.add_argument('--batch-size', type=int, default=4)
     parser.add_argument('--accumulate', type=int, default=16)
     parser.add_argument('--num-workers', type=int, default=0)
-    parser.add_argument('--lr', type=float, default=1e-3)
+    parser.add_argument('--lr', type=float, default=0)
     parser.add_argument('--resume', action='store_true')
     parser.add_argument('--unet', action='store_true')
     parser.add_argument('--adam', action='store_true')
