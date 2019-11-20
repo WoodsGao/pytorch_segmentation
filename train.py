@@ -199,6 +199,8 @@ def train(data_dir,
         }
         if adam:
             state_dict['adam'] = optimizer.state_dict()
+        else:
+            state_dict['sgd'] = optimizer.state_dict()
         torch.save(state_dict, 'weights/last.pt')
         if val_loss < best_loss:
             print('\nSaving best_loss.pt..')
