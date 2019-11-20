@@ -83,12 +83,12 @@ def train(data_dir,
     if adam:
         optimizer = optim.AdamW(model.parameters(),
                                 lr=lr if lr > 0 else 1e-4,
-                                weight_decay=1e-8)
+                                weight_decay=1e-5)
     else:
         optimizer = optim.SGD(model.parameters(),
                               lr=lr if lr > 0 else 1e-3,
                               momentum=0.9,
-                              weight_decay=1e-8,
+                              weight_decay=1e-5,
                               nesterov=True)
     if resume:
         state_dict = torch.load(weights, map_location=device)
