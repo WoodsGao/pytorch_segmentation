@@ -107,5 +107,6 @@ if __name__ == "__main__":
     a = torch.ones([2, 3, 224, 224])
     model = DeepLabV3Plus(30)
     o = model(a)
+    model.train()
     print(o.shape)
     o.mean().backward()
