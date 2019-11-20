@@ -9,11 +9,13 @@ import math
 class DeepLabV3Plus(BasicModel):
     def __init__(self, num_classes):
         super(DeepLabV3Plus, self).__init__()
-        self.backbone = EfficientNetB2(16)
-        self.aspp = Aspp(352, 128, [6, 12, 18])
-        self.low_conv = CNS(24, 48, 3)
+        self.backbone = EfficientNetB2()
+        self.high_aspp = Aspp(352, 128, [3, 6, 9])
+        self.middle_aspp = Aspp(48, 48, [12, 24, 36])
+        self.middle_conv = CNS(128 + 48, 96)
+        self.low_conv = CNS(24, 48, 1)
         self.cls_conv = nn.Sequential(
-            nn.Conv2d(128 + 48, num_classes, 3, padding=1))
+            nn.Conv2d(96 + 48, num_classes, 3, padding=1))
         # init weight and bias
         self.init()
         self.weight_standard()
@@ -23,11 +25,18 @@ class DeepLabV3Plus(BasicModel):
         x = self.backbone.block2(x)
         low = self.low_conv(x)
         x = self.backbone.block3(x)
+        middle = self.middle_aspp(x)
         x = self.backbone.block4(x)
         x = self.backbone.block5(x)
-        x = self.aspp(x)
+        x = self.high_aspp(x)
         x = F.interpolate(x,
                           scale_factor=4,
+                          mode='bilinear',
+                          align_corners=True)
+        x = torch.cat([x, middle], 1)
+        x = self.middle_conv(x)
+        x = F.interpolate(x,
+                          scale_factor=2,
                           mode='bilinear',
                           align_corners=True)
         x = torch.cat([x, low], 1)
