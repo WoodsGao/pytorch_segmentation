@@ -54,7 +54,7 @@ def train(data_dir,
         train_data,
         batch_size=batch_size,
         shuffle=True,
-        pin_memory=True, 
+        pin_memory=True,
         num_workers=num_workers,
     )
     val_data = SegmentationDataset(
@@ -65,7 +65,7 @@ def train(data_dir,
         val_data,
         batch_size=batch_size,
         shuffle=True,
-        pin_memory=True, 
+        pin_memory=True,
         num_workers=num_workers,
     )
     accumulate_count = 0
@@ -81,19 +81,26 @@ def train(data_dir,
     model = model.to(device)
     # optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
     if adam:
-        optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=5e-4)
+        optimizer = optim.AdamW(model.parameters(),
+                                lr=lr if lr > 0 else 1e-4,
+                                weight_decay=1e-8)
     else:
-        optimizer = optim.SGD(
-            model.parameters(),
-            lr=lr,
-            momentum=0.9,
-            weight_decay=5e-4,
-            nesterov=True)
+        optimizer = optim.SGD(model.parameters(),
+                              lr=lr if lr > 0 else 1e-3,
+                              momentum=0.9,
+                              weight_decay=1e-8,
+                              nesterov=True)
     if resume:
         state_dict = torch.load(weights, map_location=device)
         if adam:
             if 'adam' in state_dict:
                 optimizer.load_state_dict(state_dict['adam'])
+        else:
+            if 'sgd' in state_dict:
+                optimizer.load_state_dict(state_dict['sgd'])
+        if lr > 0:
+            for pg in optimizer.param_groups:
+                pg['lr'] = lr
         best_miou = state_dict['miou']
         best_loss = state_dict['loss']
         epoch = state_dict['epoch']
@@ -166,6 +173,7 @@ def train(data_dir,
                                  (mem, total_loss / batch_idx, inputs.size(2)))
             if accumulate_count % accumulate == 0:
                 accumulate_count = 0
+                torch.nn.utils.clip_grad_norm(model.parameters(), 10)
                 optimizer.step()
                 optimizer.zero_grad()
                 model.weight_standard()
@@ -180,6 +188,8 @@ def train(data_dir,
             writer.add_scalar('valid_loss', val_loss, epoch)
             writer.add_scalar('miou', miou, epoch)
         epoch += 1
+        for pg in optimizer.param_groups:
+            pg['lr'] *= (1 - 1e-8)
         # Save checkpoint.
         state_dict = {
             'model': model.state_dict(),
