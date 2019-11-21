@@ -1,27 +1,24 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 import cv2
-
+from .modules.nn import FocalBCELoss
 
 CE = nn.CrossEntropyLoss()
 BCE = nn.BCEWithLogitsLoss()
+focal = FocalBCELoss()
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 def compute_loss(outputs, targets):
-    cls_loss = CE(outputs, targets)
-    # weights = torch.pow(cls_loss, 1.1)
-    # weights = weights / weights.max()
-    # cls_loss = cls_loss * weights
-    # cls_loss = cls_loss.mean()
-    loss = cls_loss
+    loss = focal(outputs.softmax(1), targets)
     return loss
 
 
 def show_batch(save_path, inputs, targets, classes):
     imgs = inputs.clone()[:8]
-    segs = targets.clone()[:8]
+    segs = targets.clone()[:8].max(1)[1]
     imgs *= 255.
     imgs = imgs.clamp(0, 255).permute(0, 2, 3, 1).byte().numpy()[:, :, :, ::-1]
     segs = segs.numpy()

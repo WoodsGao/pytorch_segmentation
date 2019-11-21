@@ -6,6 +6,7 @@ import torch
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import torch.nn.functional as F
+# import torch.distributed as dist
 import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
 from models import DeepLabV3Plus, UNet
@@ -75,9 +76,9 @@ def train(data_dir,
     classes = train_loader.dataset.classes
     num_classes = len(classes)
     if unet:
-        model = UNet(30)
+        model = UNet(num_classes)
     else:
-        model = DeepLabV3Plus(30)
+        model = DeepLabV3Plus(num_classes)
     model = model.to(device)
     # optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
     if adam:
@@ -126,6 +127,16 @@ def train(data_dir,
                                           optimizer,
                                           opt_level='O1',
                                           verbosity=0)
+    #     # Initialize distributed training
+    # if torch.cuda.device_count() > 1:
+    #     dist.init_process_group(
+    #         backend='nccl',  # 'distributed backend'
+    #         init_method=
+    #         'tcp://127.0.0.1:9999',  # distributed training init method
+    #         world_size=1,  # number of nodes for distributed training
+    #         rank=0)  # distributed training node rank
+    #     model = torch.nn.parallel.DistributedDataParallel(model, find_unused_parameters=True)
+
     # create dataset
     while epoch < epochs:
         print('%d/%d' % (epoch, epochs))
@@ -141,6 +152,7 @@ def train(data_dir,
             if idx == 0:
                 show_batch('train_batch.png', inputs, targets, classes)
             inputs = inputs.to(device)
+            
             targets = targets.to(device)
             if multi_scale:
                 img_size = random.randrange(img_size_min, img_size_max) * 32
@@ -149,13 +161,10 @@ def train(data_dir,
                                        size=img_size,
                                        mode='bilinear',
                                        align_corners=False)
-                targets = F.one_hot(targets, num_classes).permute(0, 3, 1,
-                                                                  2).float()
                 targets = F.interpolate(targets,
                                         size=img_size,
                                         mode='bilinear',
                                         align_corners=False)
-                targets = targets.max(1)[1]
             outputs = model(inputs)
             loss = compute_loss(outputs, targets)
             total_loss += loss.item()
@@ -176,6 +185,7 @@ def train(data_dir,
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 10)
                 optimizer.step()
                 optimizer.zero_grad()
+                model.weight_standard()
         torch.cuda.empty_cache()
         writer.add_scalar('train_loss', total_loss / len(train_loader), epoch)
         print('')

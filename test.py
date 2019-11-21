@@ -31,7 +31,7 @@ def test(model, val_loader, obj_conf=0.5):
                 show_batch('test_batch.png', inputs.cpu(), predicted.cpu(),
                            classes)
             predicted = predicted.view(-1)
-            targets = targets.view(-1)
+            targets = targets.max(1)[1].view(-1)
             eq = predicted.eq(targets)
             total_size += predicted.size(0)
             for c_i, c in enumerate(classes):
@@ -90,9 +90,9 @@ if __name__ == "__main__":
     classes = val_loader.dataset.classes
     num_classes = len(classes)
     if opt.unet:
-        model = UNet(30)
+        model = UNet(num_classes)
     else:
-        model = DeepLabV3Plus(30)
+        model = DeepLabV3Plus(num_classes)
     model = model.to(device)
     if opt.weights:
         state_dict = torch.load(opt.weights, map_location=device)
