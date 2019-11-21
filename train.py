@@ -136,15 +136,13 @@ def train(data_dir,
     #         world_size=1,  # number of nodes for distributed training
     #         rank=0)  # distributed training node rank
     #     model = torch.nn.parallel.DistributedDataParallel(model, find_unused_parameters=True)
-
-    # create dataset
+    optimizer.zero_grad()
     while epoch < epochs:
         print('%d/%d' % (epoch, epochs))
         # train
         model.train()
         total_loss = 0
         pbar = tqdm(enumerate(train_loader), total=len(train_loader))
-        optimizer.zero_grad()
         for idx, (inputs, targets) in pbar:
             if inputs.size(0) < 2:
                 continue
