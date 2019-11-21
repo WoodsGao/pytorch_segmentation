@@ -16,7 +16,6 @@ class DeepLabV3Plus(BasicModel):
             nn.Conv2d(128 + 32, num_classes, 3, padding=1))
         # init weight and bias
         self.init()
-        self.weight_standard()
 
     def forward(self, x):
         x = self.backbone.block1(x)
@@ -49,7 +48,6 @@ class UNet(BasicModel):
         self.cls_conv = nn.Conv2d(48, num_classes, 3, padding=1)
         # init weight and bias
         self.init()
-        self.weight_standard()
 
     def forward(self, x):
         x = self.backbone.block1(x)
