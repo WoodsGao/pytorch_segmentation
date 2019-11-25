@@ -3,10 +3,10 @@ import random
 import argparse
 from tqdm import tqdm
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, DistributedSampler
 from torch.utils.tensorboard import SummaryWriter
 import torch.nn.functional as F
-# import torch.distributed as dist
+import torch.distributed as dist
 import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
 from models import DeepLabV3Plus, UNet
@@ -48,36 +48,49 @@ def train(data_dir,
         img_size_max = max(img_size * 1.5 // 32, 1)
     train_dir = os.path.join(data_dir, 'train.txt')
     val_dir = os.path.join(data_dir, 'valid.txt')
-    train_data = SegmentationDataset(train_dir,
-                                     img_size=img_size,
-                                     augments=augments)
+    skip = DIST and RANK > 0
+    train_data = SegmentationDataset(
+        train_dir,
+        img_size=img_size,
+        augments={} if skip else augments,
+        skip_init=skip,
+    )
     train_loader = DataLoader(
         train_data,
         batch_size=batch_size,
-        shuffle=True,
+        shuffle=False if DIST else True,
+        sampler=DistributedSampler(train_data) if DIST else None,
         pin_memory=True,
         num_workers=num_workers,
+        collate_fn=train_data.collate_fn,
     )
     val_data = SegmentationDataset(
         val_dir,
         img_size=img_size,
+        augments={} if skip else augments,
+        skip_init=DIST and RANK > 0,
     )
     val_loader = DataLoader(
         val_data,
         batch_size=batch_size,
-        shuffle=True,
+        shuffle=False if DIST else True,
+        sampler=DistributedSampler(val_data) if DIST else None,
         pin_memory=True,
         num_workers=num_workers,
+        collate_fn=val_data.collate_fn,
     )
     accumulate_count = 0
     best_miou = 0
     best_loss = 1000
     epoch = 0
     if unet:
-        model = UNet(64)
+        model = UNet(32)
     else:
-        model = DeepLabV3Plus(64)
+        model = DeepLabV3Plus(32)
     model = model.to(device)
+    if DIST:
+        model = torch.nn.parallel.DistributedDataParallel(
+            model, find_unused_parameters=True)
     # optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
     if adam:
         optimizer = optim.AdamW(model.parameters(),
@@ -147,9 +160,6 @@ def train(data_dir,
             batch_idx = idx + 1
             if idx == 0:
                 show_batch('train_batch.png', inputs, targets)
-            inputs = inputs.to(device)
-            
-            targets = targets.to(device)
             if multi_scale:
                 img_size = random.randrange(img_size_min, img_size_max) * 32
             if inputs.size(3) != img_size:
@@ -222,6 +232,9 @@ def train(data_dir,
 
 
 if __name__ == "__main__":
+    global DIST, RANK
+    RANK = 0
+    DIST = False
     parser = argparse.ArgumentParser()
     parser.add_argument('--data-dir', type=str, default='data/voc')
     parser.add_argument('--epochs', type=int, default=100)
@@ -236,6 +249,25 @@ if __name__ == "__main__":
     parser.add_argument('--notest', action='store_true')
     parser.add_argument('--weights', type=str, default='weights/last.pt')
     parser.add_argument('--multi-scale', action='store_true')
+    parser.add_argument('--backend',
+                        type=str,
+                        default='nccl',
+                        help='Name of the backend to use.')
+    parser.add_argument('-i',
+                        '--init-method',
+                        type=str,
+                        default='tcp://127.0.0.1:23456',
+                        help='URL specifying how to initialize the package.')
+    parser.add_argument('-s',
+                        '--world-size',
+                        type=int,
+                        default=1,
+                        help='Number of processes participating in the job.')
+    parser.add_argument('-r',
+                        '--rank',
+                        type=int,
+                        default=0,
+                        help='Rank of the current process.')
     augments = {
         'hsv': 0.1,
         'blur': 0.1,
@@ -249,6 +281,16 @@ if __name__ == "__main__":
     }
     opt = parser.parse_args()
     print(opt)
+    if opt.world_size > 1:
+        dist.init_process_group(
+            backend=opt.backend,
+            init_method=opt.init_method,
+            world_size=opt.world_size,
+            rank=opt.rank,
+        )
+        RANK = opt.rank
+        if dist.is_available() and dist.is_initialized():
+            DIST = True
     train(
         data_dir=opt.data_dir,
         epochs=opt.epochs,

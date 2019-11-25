@@ -21,15 +21,13 @@ def test(model, val_loader, obj_conf=0.5):
         pbar = tqdm(enumerate(val_loader), total=len(val_loader))
         for idx, (inputs, targets) in pbar:
             batch_idx = idx + 1
-            inputs = inputs.to(device)
-            targets = targets.to(device)
             outputs = model(inputs)
             loss = compute_loss(outputs, targets)
             val_loss += loss.item()
-            predicted = outputs.max(1)[1]
+            predicted = outputs
             if idx == 0:
                 show_batch('test_batch.png', inputs.cpu(), predicted.cpu())
-            predicted = predicted.view(-1)
+            predicted = predicted.max(1)[1].view(-1)
             targets = targets.max(1)[1].view(-1)
             eq = predicted.eq(targets)
             total_size += predicted.size(0)
@@ -87,9 +85,9 @@ if __name__ == "__main__":
         num_workers=opt.num_workers,
     )
     if opt.unet:
-        model = UNet(64)
+        model = UNet(32)
     else:
-        model = DeepLabV3Plus(64)
+        model = DeepLabV3Plus(32)
     model = model.to(device)
     if opt.weights:
         state_dict = torch.load(opt.weights, map_location=device)
