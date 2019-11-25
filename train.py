@@ -88,6 +88,12 @@ def train(data_dir,
     else:
         model = DeepLabV3Plus(32)
     model = model.to(device)
+    # Mixed precision training https://github.com/NVIDIA/apex
+    if mixed_precision:
+        model, optimizer = amp.initialize(model,
+                                          optimizer,
+                                          opt_level='O1',
+                                          verbosity=0)
     if DIST:
         model = torch.nn.parallel.DistributedDataParallel(
             model, find_unused_parameters=True)
@@ -132,12 +138,7 @@ def train(data_dir,
 
     # summary(model, (3, img_size, img_size))
 
-    # Mixed precision training https://github.com/NVIDIA/apex
-    if mixed_precision:
-        model, optimizer = amp.initialize(model,
-                                          optimizer,
-                                          opt_level='O1',
-                                          verbosity=0)
+
     #     # Initialize distributed training
     # if torch.cuda.device_count() > 1:
     #     dist.init_process_group(
@@ -160,6 +161,8 @@ def train(data_dir,
             batch_idx = idx + 1
             if idx == 0:
                 show_batch('train_batch.png', inputs, targets)
+            inputs = inputs.to(device)
+            targets = targets.to(device)
             if multi_scale:
                 img_size = random.randrange(img_size_min, img_size_max) * 32
             if inputs.size(3) != img_size:

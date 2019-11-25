@@ -21,6 +21,8 @@ def test(model, val_loader, obj_conf=0.5):
         pbar = tqdm(enumerate(val_loader), total=len(val_loader))
         for idx, (inputs, targets) in pbar:
             batch_idx = idx + 1
+            inputs = inputs.to(device)
+            targets = targets.to(device)
             outputs = model(inputs)
             loss = compute_loss(outputs, targets)
             val_loss += loss.item()
