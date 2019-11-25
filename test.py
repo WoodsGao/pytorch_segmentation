@@ -28,8 +28,7 @@ def test(model, val_loader, obj_conf=0.5):
             val_loss += loss.item()
             predicted = outputs.max(1)[1]
             if idx == 0:
-                show_batch('test_batch.png', inputs.cpu(), predicted.cpu(),
-                           classes)
+                show_batch('test_batch.png', inputs.cpu(), predicted.cpu())
             predicted = predicted.view(-1)
             targets = targets.max(1)[1].view(-1)
             eq = predicted.eq(targets)
@@ -64,7 +63,7 @@ def test(model, val_loader, obj_conf=0.5):
     for c_i, c in enumerate(classes):
         print(
             'cls: %8s, targets: %8d, pre: %8lf, rec: %8lf, iou: %8lf, F1: %8lf'
-            % (c[0], T[c_i], P[c_i], R[c_i], miou[c_i], F1[c_i]))
+            % (c, T[c_i], P[c_i], R[c_i], miou[c_i], F1[c_i]))
     val_loss /= len(val_loader)
     return val_loss, miou.mean().item()
 
@@ -87,12 +86,10 @@ if __name__ == "__main__":
         shuffle=True,
         num_workers=opt.num_workers,
     )
-    classes = val_loader.dataset.classes
-    num_classes = len(classes)
     if opt.unet:
-        model = UNet(num_classes)
+        model = UNet(64)
     else:
-        model = DeepLabV3Plus(num_classes)
+        model = DeepLabV3Plus(64)
     model = model.to(device)
     if opt.weights:
         state_dict = torch.load(opt.weights, map_location=device)

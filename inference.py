@@ -4,21 +4,17 @@ from tqdm import tqdm
 import torch
 from models import DeepLabV3Plus, UNet
 from utils.utils import device
+from utils.modules import VOC_COLORMAP
 import numpy as np
 import cv2
 
 
 def inference(img_dir='data/samples',
-              classes='data/samples/classes.names',
               img_size=256,
               output_dir='outputs',
               weights='weights/best_miou.pt',
               unet=False):
     os.makedirs(output_dir, exist_ok=True)
-    with open(classes, 'r') as f:
-        lines = [l.split(',') for l in f.readlines()]
-        lines = [[l[0], np.uint8(l[1:])] for l in lines if len(l) == 4]
-    classes = lines
     if unet:
         model = UNet(30)
     else:
@@ -46,7 +42,7 @@ def inference(img_dir='data/samples',
             output = cv2.resize(output, (img_shape[1], img_shape[0]))
             output = output.argmax(2)
             seg = np.zeros(img_shape, dtype=np.uint8)
-            for ci, (cn, color) in enumerate(classes):
+            for ci, color in enumerate(VOC_COLORMAP):
                 seg[output == ci] = color
             cv2.imwrite(os.path.join(output_dir, name), seg)
 
@@ -54,16 +50,12 @@ def inference(img_dir='data/samples',
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--img-dir', type=str, default='data/samples')
-    parser.add_argument('--classes',
-                        type=str,
-                        default='data/samples/classes.names')
     parser.add_argument('--output-dir', type=str, default='outputs')
     parser.add_argument('--img-size', type=int, default=256)
     parser.add_argument('--weights', type=str, default='weights/best_miou.pt')
     parser.add_argument('--unet', action='store_true')
     opt = parser.parse_args()
     inference(opt.img_dir,
-              opt.classes,
               opt.img_size,
               opt.output_dir,
               opt.weights,

@@ -73,12 +73,10 @@ def train(data_dir,
     best_miou = 0
     best_loss = 1000
     epoch = 0
-    classes = train_loader.dataset.classes
-    num_classes = len(classes)
     if unet:
-        model = UNet(num_classes)
+        model = UNet(64)
     else:
-        model = DeepLabV3Plus(num_classes)
+        model = DeepLabV3Plus(64)
     model = model.to(device)
     # optimizer = AdaBoundW(model.parameters(), lr=lr, weight_decay=5e-4)
     if adam:
@@ -148,7 +146,7 @@ def train(data_dir,
                 continue
             batch_idx = idx + 1
             if idx == 0:
-                show_batch('train_batch.png', inputs, targets, classes)
+                show_batch('train_batch.png', inputs, targets)
             inputs = inputs.to(device)
             
             targets = targets.to(device)

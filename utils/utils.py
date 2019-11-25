@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 import cv2
 from .modules.nn import FocalBCELoss
+from .modules.datasets import VOC_COLORMAP
 
 CE = nn.CrossEntropyLoss()
 BCE = nn.BCEWithLogitsLoss()
@@ -16,14 +17,14 @@ def compute_loss(outputs, targets):
     return loss
 
 
-def show_batch(save_path, inputs, targets, classes):
+def show_batch(save_path, inputs, targets):
     imgs = inputs.clone()[:8]
     segs = targets.clone()[:8].max(1)[1]
     imgs *= 255.
     imgs = imgs.clamp(0, 255).permute(0, 2, 3, 1).byte().numpy()[:, :, :, ::-1]
     segs = segs.numpy()
     seg_rgb = np.zeros_like(imgs, dtype=np.uint8)
-    for ci, (cn, color) in enumerate(classes):
+    for ci, color in enumerate(VOC_COLORMAP):
         seg_rgb[segs == ci] = color
     segs = seg_rgb
     imgs = imgs.reshape(-1, imgs.shape[2], imgs.shape[3])

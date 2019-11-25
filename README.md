@@ -37,7 +37,7 @@ Please organize your data in the following format:
 
 The content of `classes.names` is:
 
-    <class_name>, <blue value of the color>, <green value of the color>, <red value of the color>
+    <class_name_1>
     ...
             
 Then execute `python3 split_dataset.py data/<custom>`.It splits the data into training and validation sets and generates `data/<custom>/train.txt` and `data/<custom>/valid.txt`.
