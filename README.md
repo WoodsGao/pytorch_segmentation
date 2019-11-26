@@ -10,6 +10,7 @@ Implementation of some semantic segmentation models with pytorch, including Deep
  - Flexible and efficient toolkit(See [woodsgao/pytorch_modules](https://github.com/woodsgao/pytorch_modules))
  - Online data augmenting(See [woodsgao/image_augments](https://github.com/woodsgao/image_augments))
  - Mixed precision training(If you have already installed [apex](https://github.com/NVIDIA/apex))
+ - Efficient distributed training(0.8x faster when using two 2080ti)
 
 ## Installation
 
@@ -45,6 +46,11 @@ Then execute `python3 split_dataset.py data/<custom>`.It splits the data into tr
 ### Training
 
     python3 train.py --data-dir data/<custom> --img-size 512 --batch-size 8 --accumulate 8 --epoch 200 --lr 1e-4 --adam
+
+### Distributed Training
+
+Run the following command in all nodes.The process with rank 0 will save your weights
+    python3 train.py --data-dir data/<custom> --img-size 512 --batch-size 8 --accumulate 8 --epoch 200 --lr 1e-4 --adam -s <world_size> -r <rank> -i tcp://<rank_0_node_address>:<port>
 
 ### Testing
 

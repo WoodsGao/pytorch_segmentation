@@ -1,13 +1,14 @@
 import torch
 from models import DeepLabV3Plus, UNet
+import torch.distributed as dist
 from torch.utils.data import DataLoader
 from utils.modules.datasets import SegmentationDataset
-from utils.utils import compute_loss, device, show_batch
+from utils.utils import compute_loss, device, show_batch, compute_metrics
 from tqdm import tqdm
 import argparse
 
 
-def test(model, val_loader, obj_conf=0.5):
+def test(model, val_loader, obj_conf=0.5, DIST=False):
     model.eval()
     val_loss = 0
     classes = val_loader.dataset.classes
@@ -42,24 +43,15 @@ def test(model, val_loader, obj_conf=0.5):
                 tp[c_i] += tpi
                 fn[c_i] += fni
                 fp[c_i] += fpi
-            union = tp + fp + fn
-            union[union <= 0] = 1
-            miou = tp / union
-            T = tp + fn
-            P = tp + fp
-            P[P <= 0] = 1
-            P = tp / P
-            R = tp + fn
-            R[R <= 0] = 1
-            R = tp / R
-            F1 = (2 * tp + fp + fn)
-            F1[F1 <= 0] = 1
-            F1 = 2 * tp / F1
+            T, P, R, miou, F1 = compute_metrics(tp, fn, fp)
             pbar.set_description(
                 'loss: %8lf, mAP: %8lf, F1: %8lf, miou: %8lf' %
                 (val_loss / batch_idx, P.mean(), F1.mean(), miou.mean()))
-    print('')
-
+    if DIST:
+        dist.all_reduce(tp, op=dist.ReduceOp.SUM)
+        dist.all_reduce(fn, op=dist.ReduceOp.SUM)
+        dist.all_reduce(fp, op=dist.ReduceOp.SUM)
+        T, P, R, miou, F1 = compute_metrics(tp, fn, fp)
     for c_i, c in enumerate(classes):
         print(
             'cls: %8s, targets: %8d, pre: %8lf, rec: %8lf, iou: %8lf, F1: %8lf'
@@ -78,8 +70,7 @@ if __name__ == "__main__":
     parser.add_argument('--num-workers', type=int, default=0)
     opt = parser.parse_args()
 
-    val_data = SegmentationDataset(opt.val_list,
-                                   img_size=opt.img_size)
+    val_data = SegmentationDataset(opt.val_list, img_size=opt.img_size)
     val_loader = DataLoader(
         val_data,
         batch_size=opt.batch_size,

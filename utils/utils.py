@@ -32,3 +32,34 @@ def show_batch(save_path, inputs, targets):
 
     save_img = np.concatenate([imgs, segs], 1)
     cv2.imwrite(save_path, save_img)
+
+def load_checkpoint(weights, model, optimizer, adam):
+    state_dict = torch.load(weights, map_location=device)
+    if adam:
+        if 'adam' in state_dict:
+            optimizer.load_state_dict(state_dict['adam'])
+    else:
+        if 'sgd' in state_dict:
+            optimizer.load_state_dict(state_dict['sgd'])
+    best_miou = state_dict['miou']
+    best_loss = state_dict['loss']
+    epoch = state_dict['epoch']
+    model.load_state_dict(state_dict['model'], strict=False)
+    return best_loss, best_miou, epoch
+
+
+def compute_metrics(tp, fn, fp):
+    union = tp + fp + fn
+    union[union <= 0] = 1
+    miou = tp / union
+    T = tp + fn
+    P = tp + fp
+    P[P <= 0] = 1
+    P = tp / P
+    R = tp + fn
+    R[R <= 0] = 1
+    R = tp / R
+    F1 = (2 * tp + fp + fn)
+    F1[F1 <= 0] = 1
+    F1 = 2 * tp / F1
+    return T, P, R, miou, F1
