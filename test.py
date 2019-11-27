@@ -3,15 +3,16 @@ from models import DeepLabV3Plus, UNet
 import torch.distributed as dist
 from torch.utils.data import DataLoader
 from utils.modules.datasets import SegmentationDataset
-from utils.utils import compute_loss, device, show_batch, compute_metrics
+from utils.modules.utils import device
+from utils.utils import compute_loss, show_batch, compute_metrics
 from tqdm import tqdm
 import argparse
 
 
-def test(model, val_loader, obj_conf=0.5, DIST=False):
+def test(model, fetcher, obj_conf=0.5, distributed=False):
     model.eval()
     val_loss = 0
-    classes = val_loader.dataset.classes
+    classes = fetcher.loader.dataset.classes
     num_classes = len(classes)
     total_size = 0
     # true positive / intersection
@@ -19,11 +20,9 @@ def test(model, val_loader, obj_conf=0.5, DIST=False):
     fp = torch.zeros(num_classes)
     fn = torch.zeros(num_classes)
     with torch.no_grad():
-        pbar = tqdm(enumerate(val_loader), total=len(val_loader))
+        pbar = tqdm(enumerate(fetcher), total=len(fetcher))
         for idx, (inputs, targets) in pbar:
             batch_idx = idx + 1
-            inputs = inputs.to(device)
-            targets = targets.to(device)
             outputs = model(inputs)
             loss = compute_loss(outputs, targets)
             val_loss += loss.item()
@@ -45,19 +44,21 @@ def test(model, val_loader, obj_conf=0.5, DIST=False):
                 fp[c_i] += fpi
             T, P, R, miou, F1 = compute_metrics(tp, fn, fp)
             pbar.set_description(
-                'loss: %8lf, mAP: %8lf, F1: %8lf, miou: %8lf' %
+                'loss: %8g, mAP: %8g, F1: %8g, miou: %8g' %
                 (val_loss / batch_idx, P.mean(), F1.mean(), miou.mean()))
-    if DIST:
+    if distributed:
+        tp = tp.to(device)
+        fn = fn.to(device)
+        fp = fp.to(device)
         dist.all_reduce(tp, op=dist.ReduceOp.SUM)
         dist.all_reduce(fn, op=dist.ReduceOp.SUM)
         dist.all_reduce(fp, op=dist.ReduceOp.SUM)
-        T, P, R, miou, F1 = compute_metrics(tp, fn, fp)
+        T, P, R, miou, F1 = compute_metrics(tp.cpu(), fn.cpu(), fp.cpu())
     for c_i, c in enumerate(classes):
         print(
             'cls: %8s, targets: %8d, pre: %8lf, rec: %8lf, iou: %8lf, F1: %8lf'
             % (c, T[c_i], P[c_i], R[c_i], miou[c_i], F1[c_i]))
-    val_loss /= len(val_loader)
-    return val_loss, miou.mean().item()
+    return miou.mean().item()
 
 
 if __name__ == "__main__":
