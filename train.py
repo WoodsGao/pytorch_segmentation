@@ -51,9 +51,8 @@ def train(data_dir,
         if distributed else None,
         pin_memory=True,
         num_workers=num_workers,
-        collate_fn=train_data.collate_fn,
     )
-    train_fetcher = Fetcher(train_loader)
+    train_fetcher = Fetcher(train_loader, train_data.post_fetch_fn)
     if not notest:
         val_data = SegmentationDataset(
             val_dir,
@@ -71,9 +70,8 @@ def train(data_dir,
             if distributed else None,
             pin_memory=True,
             num_workers=num_workers,
-            collate_fn=val_data.collate_fn,
         )
-        val_fetcher = Fetcher(val_loader)
+        val_fetcher = Fetcher(val_loader, post_fetch_fn=val_data.post_fetch_fn)
 
     if unet:
         model = UNet(32)
