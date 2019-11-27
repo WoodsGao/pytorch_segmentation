@@ -1,15 +1,10 @@
 import os
-import random
 import argparse
-from tqdm import tqdm
-import torch
 from torch.utils.data import DataLoader, DistributedSampler
-import torch.nn.functional as F
 import torch.distributed as dist
-import torch.optim as optim
 from models import DeepLabV3Plus, UNet
 from utils.modules.datasets import SegmentationDataset
-from utils.modules.utils import Trainer, Fetcher, device
+from utils.modules.utils import Trainer, Fetcher
 from utils.utils import compute_loss
 from test import test
 
