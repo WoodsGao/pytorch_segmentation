@@ -41,6 +41,8 @@ def train(data_dir,
         augments=augments,
         skip_init=skip,
     )
+    if distributed:
+        dist.barrier()
     train_loader = DataLoader(
         train_data,
         batch_size=batch_size,
@@ -59,6 +61,8 @@ def train(data_dir,
             augments={},
             skip_init=skip,
         )
+        if distributed:
+            dist.barrier()
         val_loader = DataLoader(
             val_data,
             batch_size=batch_size,
@@ -100,7 +104,7 @@ if __name__ == "__main__":
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--img-size', type=int, default=256)
     parser.add_argument('--batch-size', type=int, default=4)
-    parser.add_argument('--accumulate', type=int, default=16)
+    parser.add_argument('--accumulate', type=int, default=1)
     parser.add_argument('--num-workers', type=int, default=0)
     parser.add_argument('--lr', type=float, default=0)
     parser.add_argument('--unet', action='store_true')
