@@ -2,7 +2,7 @@ import os
 import argparse
 from torch.utils.data import DataLoader, DistributedSampler
 import torch.distributed as dist
-from models import DeepLabV3Plus, UNet
+from models import DeepLabV3Plus
 from utils.modules.datasets import SegmentationDataset
 from utils.modules.utils import Trainer, Fetcher
 from utils.utils import compute_loss
@@ -15,7 +15,6 @@ def train(data_dir,
           batch_size=8,
           accumulate=2,
           lr=1e-3,
-          unet=False,
           adam=False,
           weights='',
           num_workers=0,
@@ -68,10 +67,7 @@ def train(data_dir,
         )
         val_fetcher = Fetcher(val_loader, post_fetch_fn=val_data.post_fetch_fn)
 
-    if unet:
-        model = UNet(32)
-    else:
-        model = DeepLabV3Plus(32)
+    model = DeepLabV3Plus(32)
 
     trainer = Trainer(model, train_fetcher, compute_loss, weights,
                       accumulate, adam, lr, distributed, mixed_precision)
@@ -100,7 +96,6 @@ if __name__ == "__main__":
     parser.add_argument('--accumulate', type=int, default=1)
     parser.add_argument('--num-workers', type=int, default=0)
     parser.add_argument('--lr', type=float, default=0)
-    parser.add_argument('--unet', action='store_true')
     parser.add_argument('--adam', action='store_true')
     parser.add_argument('--mp', action='store_true', help='mixed precision')
     parser.add_argument('--notest', action='store_true')
@@ -161,7 +156,6 @@ if __name__ == "__main__":
         multi_scale=opt.multi_scale,
         notest=opt.notest,
         adam=opt.adam,
-        unet=opt.unet,
         mixed_precision=opt.mp,
         distributed=distributed,
         rank=opt.rank,
