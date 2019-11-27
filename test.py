@@ -9,7 +9,7 @@ from tqdm import tqdm
 import argparse
 
 
-def test(model, fetcher, obj_conf=0.5, distributed=False):
+def test(model, fetcher, distributed=False):
     model.eval()
     val_loss = 0
     classes = fetcher.loader.dataset.classes
@@ -56,7 +56,7 @@ def test(model, fetcher, obj_conf=0.5, distributed=False):
         T, P, R, miou, F1 = compute_metrics(tp.cpu(), fn.cpu(), fp.cpu())
     for c_i, c in enumerate(classes):
         print(
-            'cls: %8s, targets: %8d, pre: %8lf, rec: %8lf, iou: %8lf, F1: %8lf'
+            'cls: %8s, targets: %8d, pre: %8g, rec: %8g, iou: %8g, F1: %8g'
             % (c, T[c_i], P[c_i], R[c_i], miou[c_i], F1[c_i]))
     return miou.mean().item()
 
