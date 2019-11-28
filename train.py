@@ -28,13 +28,17 @@ def train(data_dir,
     os.makedirs('weights', exist_ok=True)
     train_dir = os.path.join(data_dir, 'train.txt')
     val_dir = os.path.join(data_dir, 'valid.txt')
-    skip = distributed and rank > 0
     train_data = SegmentationDataset(
         train_dir,
         img_size=img_size,
         augments=augments,
-        skip_init=skip,
     )
+    if not notest:
+        val_data = SegmentationDataset(
+            val_dir,
+            img_size=img_size,
+            augments={},
+        )
     if distributed:
         dist.barrier()
     train_loader = DataLoader(
@@ -48,14 +52,6 @@ def train(data_dir,
     )
     train_fetcher = Fetcher(train_loader, train_data.post_fetch_fn)
     if not notest:
-        val_data = SegmentationDataset(
-            val_dir,
-            img_size=img_size,
-            augments={},
-            skip_init=skip,
-        )
-        if distributed:
-            dist.barrier()
         val_loader = DataLoader(
             val_data,
             batch_size=batch_size,
@@ -108,7 +104,7 @@ if __name__ == "__main__":
     parser.add_argument('-i',
                         '--init-method',
                         type=str,
-                        default='tcp://127.0.0.1:23456',
+                        default='tcp://0.0.0.0:23456',
                         help='URL specifying how to initialize the package.')
     parser.add_argument('-s',
                         '--world-size',

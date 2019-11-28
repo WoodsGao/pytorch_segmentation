@@ -1,19 +1,23 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils.modules.nn import Aspp, Swish, CNS, EmptyLayer
-from utils.modules.backbones import BasicModel, EfficientNetB4
+from utils.modules.nn import Aspp, Swish, CNS, EmptyLayer, MbBlock
+from utils.modules.backbones import BasicModel, EfficientNet
 import math
 
 
 class DeepLabV3Plus(BasicModel):
     def __init__(self, num_classes):
         super(DeepLabV3Plus, self).__init__()
-        self.backbone = EfficientNetB4()
-        self.backbone.block5 = EmptyLayer()
-        self.aspp = Aspp(160, 128, [6, 12, 18])
+        self.backbone = EfficientNet(2)
+        self.backbone.block5 = nn.Sequential(
+            MbBlock(128, 216, 5, dilation=2, reps=2, drop_rate=0.3),
+            MbBlock(216, 216, 5, dilation=4, reps=2, drop_rate=0.3),
+            MbBlock(216, 352, 3, dilation=8, reps=2, drop_rate=0.3),
+        )
+        self.aspp = Aspp(352, 64, [6, 12, 18])
         self.cls_conv = nn.Sequential(
-            nn.Conv2d(128 + 32, num_classes, 3, padding=1))
+            nn.Conv2d(96, num_classes, 3, padding=1))
         # init weight and bias
         self.init()
 
@@ -23,6 +27,7 @@ class DeepLabV3Plus(BasicModel):
         low = x
         x = self.backbone.block3(x)
         x = self.backbone.block4(x)
+        x = self.backbone.block5(x)
         x = self.aspp(x)
         x = F.interpolate(x,
                           scale_factor=4,
@@ -40,7 +45,7 @@ class DeepLabV3Plus(BasicModel):
 class UNet(BasicModel):
     def __init__(self, num_classes):
         super(UNet, self).__init__()
-        self.backbone = EfficientNetB4()
+        self.backbone = EfficientNet(4)
         self.backbone.block5 = EmptyLayer()
         self.up_conv4 = CNS(160, 56)
         self.up_conv3 = CNS(112, 32)
