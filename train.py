@@ -135,3 +135,5 @@ if __name__ == "__main__":
         mixed_precision=opt.mp,
         local_rank=opt.local_rank,
     )
+    if dist.is_initialized():
+        dist.destroy_process_group()
