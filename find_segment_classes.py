@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import sys
 from tqdm import tqdm
+from utils.modules.utils import IMG_EXT
 
 
 def run(data_dir):
@@ -10,7 +11,7 @@ def run(data_dir):
     names = os.listdir(os.path.join(data_dir, 'labels'))
     names = [
         name for name in names
-        if os.path.splitext(name)[1] in ['.jpg', '.jpeg', '.png', '.tiff']
+        if os.path.splitext(name)[1] in IMG_EXT
     ]
     for name in tqdm(names):
         img = cv2.imread(os.path.join(data_dir, 'labels', name)).reshape(-1, 3)
