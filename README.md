@@ -45,17 +45,17 @@ Then execute `python3 split_dataset.py data/<custom>`.It splits the data into tr
 
 ### Training
 
-    python3 train.py --data-dir data/<custom> --img-size 512 --batch-size 8 --accumulate 8 --epoch 200 --lr 1e-4 --adam
+    python3 train.py --data-dir data/<custom>
 
 ### Distributed Training
 
-Run the following command in all nodes.The process with rank 0 will save your weights
-    python3 train.py --data-dir data/<custom> --img-size 512 --batch-size 8 --accumulate 8 --epoch 200 --lr 1e-4 --adam -s <world_size> -r <rank> -i tcp://<rank_0_node_address>:<port>
+Run the following command in all nodes.Every node will save your weights
+    python3 -m torch.distributed.launch --nnodes <nnodes> --node_rank <node_rank> --nproc_per_node <nproc_per_node>  --master_addr <master_addr>  --master_port <master_port> train.py --data-dir data/<custom>
 
 ### Testing
 
-    python3 test.py --val-list /data/<custom>/valid.txt --img-size 224 --batch-size 8 --weights weights/best_miou.pt
+    python3 test.py --val-list /data/<custom>/valid.txt
 
 ### Inference
 
-    python3 inference.py --img-dir data/samples --classes data/samples/classes.names --img-size 256 --output_dir outputs --weights weights/best_miou.pt
+    python3 inference.py --img-dir data/samples
