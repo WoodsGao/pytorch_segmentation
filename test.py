@@ -9,7 +9,7 @@ from tqdm import tqdm
 import argparse
 
 
-def test(model, fetcher, distributed=False):
+def test(model, fetcher):
     model.eval()
     val_loss = 0
     classes = fetcher.loader.dataset.classes
@@ -46,7 +46,7 @@ def test(model, fetcher, distributed=False):
             pbar.set_description(
                 'loss: %8g, mAP: %8g, F1: %8g, miou: %8g' %
                 (val_loss / batch_idx, P.mean(), F1.mean(), miou.mean()))
-    if distributed:
+    if dist.is_initialized():
         tp = tp.to(device)
         fn = fn.to(device)
         fp = fp.to(device)
