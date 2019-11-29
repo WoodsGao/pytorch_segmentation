@@ -3,7 +3,7 @@ import argparse
 from tqdm import tqdm
 import torch
 from models import DeepLabV3Plus, UNet
-from utils.modules.utils import device
+from utils.modules.utils import device, IMG_EXT
 from utils.modules.datasets import VOC_COLORMAP
 import numpy as np
 import cv2
@@ -25,7 +25,7 @@ def inference(img_dir='data/samples',
     model.eval()
     names = [
         n for n in os.listdir(img_dir)
-        if os.path.splitext(n)[1] in ['.jpg', '.jpeg', '.png', '.tiff']
+        if os.path.splitext(n)[1] in IMG_EXT
     ]
     with torch.no_grad():
         for name in tqdm(names):
