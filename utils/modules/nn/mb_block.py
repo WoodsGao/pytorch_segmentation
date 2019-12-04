@@ -2,7 +2,7 @@ from random import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from . import Swish, CNS, SELayer, EmptyLayer
+from . import Swish, CNS, SELayer, EmptyLayer, DropConnect, WSConv2d
 
 
 class MbBlock(nn.Module):
@@ -20,7 +20,7 @@ class MbBlock(nn.Module):
             MbConv(in_channels, out_channels, ksize, stride, dilation,
                    expand_ratio, drop_rate)
         ]
-        for i in range(reps - 1):
+        for i in range(reps):
             blocks.append(
                 MbConv(out_channels, out_channels, ksize, 1, dilation,
                        expand_ratio, drop_rate))
@@ -56,8 +56,9 @@ class MbConv(nn.Module):
                 groups=mid_channels,
                 dilation=dilation),
             SELayer(mid_channels),
-            # See https://arxiv.org/pdf/1604.04112.pdf
+            # no activation, see https://arxiv.org/pdf/1604.04112.pdf
             CNS(mid_channels, out_channels, 1, activate=False),
+            DropConnect(0.1),
         )
 
     def forward(self, x):
@@ -65,6 +66,7 @@ class MbConv(nn.Module):
             return x
         f = self.block(x)
         if self.add:
-            f.add_(x)
-            f.mul_(0.5)
+            if not self.training:
+                f *= (1 - self.drop_rate)
+            f += x
         return f
