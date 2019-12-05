@@ -24,7 +24,7 @@ def test(model, fetcher):
         for idx, (inputs, targets) in pbar:
             batch_idx = idx + 1
             outputs = model(inputs)
-            loss = compute_loss(outputs, targets)
+            loss = compute_loss(outputs, targets, model)
             val_loss += loss.item()
             predicted = outputs
             if idx == 0:

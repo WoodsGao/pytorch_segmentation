@@ -11,13 +11,34 @@ class DeepLabV3Plus(BasicModel):
         super(DeepLabV3Plus, self).__init__()
         self.backbone = EfficientNet(2)
         self.backbone.block5 = nn.Sequential(
-            MbBlock(128, 216, 5, dilation=2, reps=2, drop_rate=0.3),
-            MbBlock(216, 216, 5, dilation=4, reps=2, drop_rate=0.3),
-            MbBlock(216, 352, 3, dilation=8, reps=2, drop_rate=0.3),
+            MbBlock(
+                self.backbone.width[5],
+                self.backbone.width[6],
+                5,
+                dilation=2,
+                reps=self.backbone.depth[-1],
+            ),
+            MbBlock(
+                self.backbone.width[6],
+                self.backbone.width[6],
+                5,
+                dilation=4,
+                reps=self.backbone.depth[-1],
+            ),
+            MbBlock(
+                self.backbone.width[6],
+                self.backbone.width[7],
+                3,
+                dilation=8,
+                reps=self.backbone.depth[-1],
+            ),
         )
         self.aspp = Aspp(352, 64, [6, 12, 18])
         self.cls_conv = nn.Sequential(
-            nn.Conv2d(96, num_classes, 3, padding=1))
+            nn.Conv2d(64 + self.backbone.out_channels[1],
+                      num_classes,
+                      3,
+                      padding=1))
         # init weight and bias
         self.init()
 

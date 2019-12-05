@@ -9,8 +9,8 @@ BCE = nn.BCEWithLogitsLoss()
 focal = FocalBCELoss()
 
 
-def compute_loss(outputs, targets):
-    loss = focal(outputs.softmax(1), targets)
+def compute_loss(outputs, targets, model):
+    loss = CE(outputs, targets.max(1)[1])
     return loss
 
 
