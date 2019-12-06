@@ -75,7 +75,8 @@ def train(data_dir,
         if trainer.epoch % 10 == 0:
             save_path_list.append('bak%d.pt' % trainer.epoch)
         if not notest:
-            metrics = test(trainer.model, val_fetcher)
+            with torch.no_grad():
+                metrics = test(trainer.model, val_fetcher)
             if metrics > trainer.metrics:
                 trainer.metrics = metrics
                 save_path_list.append('best.pt')

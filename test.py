@@ -28,7 +28,7 @@ def test(model, fetcher):
             val_loss += loss.item()
             predicted = outputs
             if idx == 0:
-                show_batch('test_batch.png', inputs.cpu(), predicted.cpu())
+                show_batch(inputs.cpu(), predicted.cpu())
             predicted = predicted.max(1)[1].view(-1)
             targets = targets.max(1)[1].view(-1)
             eq = predicted.eq(targets)
@@ -54,10 +54,20 @@ def test(model, fetcher):
         dist.all_reduce(fn, op=dist.ReduceOp.SUM)
         dist.all_reduce(fp, op=dist.ReduceOp.SUM)
         T, P, R, miou, F1 = compute_metrics(tp.cpu(), fn.cpu(), fp.cpu())
-    for c_i, c in enumerate(classes):
-        print(
-            'cls: %8s, targets: %8d, pre: %8g, rec: %8g, iou: %8g, F1: %8g'
-            % (c, T[c_i], P[c_i], R[c_i], miou[c_i], F1[c_i]))
+    if len(classes) < 10:
+        for c_i, c in enumerate(classes):
+            print(
+                'cls: %8s, targets: %8d, pre: %8g, rec: %8g, iou: %8g, F1: %8g'
+                % (c, T[c_i], P[c_i], R[c_i], miou[c_i], F1[c_i]))
+    else:
+        print('top error 5')
+        copy_miou = miou.clone()
+        for i in range(5):
+            c_i = copy_miou.min(0)[1]
+            copy_miou[c_i] = 1
+            print(
+                'cls: %8s, targets: %8d, pre: %8g, rec: %8g, iou: %8g, F1: %8g'
+                % (c, T[c_i], P[c_i], R[c_i], miou[c_i], F1[c_i]))
     return miou.mean().item()
 
 
