@@ -45,12 +45,12 @@ Then execute `python3 split_dataset.py data/<custom>`.It splits the data into tr
 
 ### Training
 
-    python3 train.py --data-dir data/<custom>
+    python3 train.py --data data/<custom>
 
 ### Distributed Training
 
 Run the following command in all nodes.Every node will save your weights
-    python3 -m torch.distributed.launch --nnodes <nnodes> --node_rank <node_rank> --nproc_per_node <nproc_per_node>  --master_addr <master_addr>  --master_port <master_port> train.py --data-dir data/<custom>
+    python3 train.py --data data/<custom> -s <world-size> -r <rank> -i <tcp://master-server:port>
 
 ### Testing
 

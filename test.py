@@ -19,33 +19,32 @@ def test(model, fetcher):
     tp = torch.zeros(num_classes)
     fp = torch.zeros(num_classes)
     fn = torch.zeros(num_classes)
-    with torch.no_grad():
-        pbar = tqdm(enumerate(fetcher), total=len(fetcher))
-        for idx, (inputs, targets) in pbar:
-            batch_idx = idx + 1
-            outputs = model(inputs)
-            loss = compute_loss(outputs, targets, model)
-            val_loss += loss.item()
-            predicted = outputs
-            if idx == 0:
-                show_batch(inputs.cpu(), predicted.cpu())
-            predicted = predicted.max(1)[1].view(-1)
-            targets = targets.max(1)[1].view(-1)
-            eq = predicted.eq(targets)
-            total_size += predicted.size(0)
-            for c_i, c in enumerate(classes):
-                indices = targets.eq(c_i)
-                positive = indices.sum().item()
-                tpi = eq[indices].sum().item()
-                fni = positive - tpi
-                fpi = predicted.eq(c_i).sum().item() - tpi
-                tp[c_i] += tpi
-                fn[c_i] += fni
-                fp[c_i] += fpi
-            T, P, R, miou, F1 = compute_metrics(tp, fn, fp)
-            pbar.set_description(
-                'loss: %8g, mAP: %8g, F1: %8g, miou: %8g' %
-                (val_loss / batch_idx, P.mean(), F1.mean(), miou.mean()))
+    pbar = tqdm(enumerate(fetcher), total=len(fetcher))
+    for idx, (inputs, targets) in pbar:
+        batch_idx = idx + 1
+        outputs = model(inputs)
+        loss = compute_loss(outputs, targets, model)
+        val_loss += loss.item()
+        predicted = outputs
+        if idx == 0:
+            show_batch(inputs.cpu(), predicted.cpu())
+        predicted = predicted.max(1)[1].view(-1)
+        targets = targets.max(1)[1].view(-1)
+        eq = predicted.eq(targets)
+        total_size += predicted.size(0)
+        for c_i, c in enumerate(classes):
+            indices = targets.eq(c_i)
+            positive = indices.sum().item()
+            tpi = eq[indices].sum().item()
+            fni = positive - tpi
+            fpi = predicted.eq(c_i).sum().item() - tpi
+            tp[c_i] += tpi
+            fn[c_i] += fni
+            fp[c_i] += fpi
+        T, P, R, miou, F1 = compute_metrics(tp, fn, fp)
+        pbar.set_description(
+            'loss: %8g, mAP: %8g, F1: %8g, miou: %8g' %
+            (val_loss / batch_idx, P.mean(), F1.mean(), miou.mean()))
     if dist.is_initialized():
         tp = tp.to(device)
         fn = fn.to(device)
