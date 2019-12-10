@@ -2,7 +2,7 @@ import os
 import argparse
 from tqdm import tqdm
 import torch
-from models import DeepLabV3Plus, UNet
+from models import DeepLabV3Plus
 from utils.modules.utils import device, IMG_EXT
 from utils.modules.datasets import VOC_COLORMAP
 import numpy as np
@@ -15,10 +15,7 @@ def inference(img_dir='data/samples',
               weights='weights/best_miou.pt',
               unet=False):
     os.makedirs(output_dir, exist_ok=True)
-    if unet:
-        model = UNet(30)
-    else:
-        model = DeepLabV3Plus(30)
+    model = DeepLabV3Plus(32)
     model = model.to(device)
     state_dict = torch.load(weights, map_location=device)
     model.load_state_dict(state_dict['model'])
@@ -37,7 +34,7 @@ def inference(img_dir='data/samples',
             img = cv2.resize(img, (int(w * 32), int(h * 32)))
             img = img[:, :, ::-1]
             img = img.transpose(2, 0, 1)
-            img = torch.FloatTensor([img], device=device) / 255.
+            img = torch.FloatTensor([img]).to(device) / 255.
             output = model(img)[0].cpu().numpy().transpose(1, 2, 0)
             output = cv2.resize(output, (img_shape[1], img_shape[0]))
             output = output.argmax(2)
@@ -52,11 +49,9 @@ if __name__ == "__main__":
     parser.add_argument('--img-dir', type=str, default='data/samples')
     parser.add_argument('--output-dir', type=str, default='outputs')
     parser.add_argument('--img-size', type=int, default=256)
-    parser.add_argument('--weights', type=str, default='weights/best_miou.pt')
-    parser.add_argument('--unet', action='store_true')
+    parser.add_argument('--weights', type=str, default='weights/best.pt')
     opt = parser.parse_args()
     inference(opt.img_dir,
               opt.img_size,
               opt.output_dir,
-              opt.weights,
-              unet=opt.unet)
+              opt.weights)
