@@ -9,39 +9,33 @@ import math
 class DeepLabV3Plus(BasicModel):
     def __init__(self, num_classes):
         super(DeepLabV3Plus, self).__init__()
-        # self.backbone = EfficientNet(2)
-        # self.backbone.block5 = nn.Sequential(
-        #     MbBlock(
-        #         self.backbone.width[5],
-        #         self.backbone.width[6],
-        #         5,
-        #         dilation=2,
-        #         reps=self.backbone.depth[-1],
-        #     ),
-        #     MbBlock(
-        #         self.backbone.width[6],
-        #         self.backbone.width[6],
-        #         5,
-        #         dilation=4,
-        #         reps=self.backbone.depth[-1],
-        #     ),
-        #     MbBlock(
-        #         self.backbone.width[6],
-        #         self.backbone.width[7],
-        #         3,
-        #         dilation=8,
-        #         reps=self.backbone.depth[-1],
-        #     ),
-        # )
-        self.backbone = ResNet()
+        self.backbone = EfficientNet(0)
         self.backbone.block5 = nn.Sequential(
-            ResBlock(512, 1024, dilation=2, reps=2), 
-            ResBlock(1024, 1024, dilation=4, reps=1), 
-            ResBlock(1024, 1024, dilation=8, reps=1),             
+            MbBlock(
+                self.backbone.width[5],
+                self.backbone.width[6],
+                5,
+                dilation=2,
+                reps=self.backbone.depth[-1],
+            ),
+            MbBlock(
+                self.backbone.width[6],
+                self.backbone.width[6],
+                5,
+                dilation=4,
+                reps=self.backbone.depth[-1],
+            ),
+            MbBlock(
+                self.backbone.width[6],
+                self.backbone.width[7],
+                3,
+                dilation=8,
+                reps=self.backbone.depth[-1],
+            ),
         )
-        self.aspp = Aspp(1024, 256, [6, 12, 18])
+        self.aspp = Aspp(self.backbone.out_channels[-1], 128, [6, 12, 18])
         self.cls_conv = nn.Sequential(
-            nn.Conv2d(256 + 128,
+            nn.Conv2d(128 + self.backbone.out_channels[1],
                       num_classes,
                       3,
                       padding=1))
