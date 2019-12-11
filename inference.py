@@ -3,8 +3,8 @@ import argparse
 from tqdm import tqdm
 import torch
 from models import DeepLabV3Plus
-from utils.modules.utils import device, IMG_EXT
-from utils.modules.datasets import VOC_COLORMAP
+from pytorch_modules.utils import device, IMG_EXT
+from pytorch_modules.datasets import VOC_COLORMAP
 import numpy as np
 import cv2
 

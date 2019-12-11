@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils.modules.nn import Aspp, Swish, CNS, EmptyLayer, MbBlock, ResBlock
-from utils.modules.backbones import BasicModel, EfficientNet, ResNet
+from pytorch_modules.nn import Aspp, Swish, CNS, EmptyLayer, MbBlock, ResBlock
+from pytorch_modules.backbones import BasicModel, EfficientNet, ResNet
 import math
 
 

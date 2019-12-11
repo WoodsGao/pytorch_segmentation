@@ -2,8 +2,8 @@ import torch
 from models import DeepLabV3Plus, UNet
 import torch.distributed as dist
 from torch.utils.data import DataLoader
-from utils.modules.datasets import SegmentationDataset
-from utils.modules.utils import device
+from pytorch_modules.datasets import SegmentationDataset
+from pytorch_modules.utils import device
 from utils.utils import compute_loss, show_batch, compute_metrics
 from tqdm import tqdm
 import argparse

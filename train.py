@@ -4,8 +4,8 @@ import torch
 from torch.utils.data import DataLoader, DistributedSampler
 import torch.distributed as dist
 from models import DeepLabV3Plus
-from utils.modules.datasets import SegmentationDataset
-from utils.modules.utils import Trainer, Fetcher
+from pytorch_modules.datasets import SegmentationDataset
+from pytorch_modules.utils import Trainer, Fetcher
 from utils.utils import compute_loss
 from test import test
 

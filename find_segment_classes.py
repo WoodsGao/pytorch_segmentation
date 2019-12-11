@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import sys
 from tqdm import tqdm
-from utils.modules.utils import IMG_EXT
+from pytorch_modules.utils import IMG_EXT
 
 
 def run(data_dir):
