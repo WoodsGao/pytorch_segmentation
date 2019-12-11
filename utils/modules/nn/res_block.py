@@ -1,21 +1,29 @@
 import torch.nn as nn
 from random import random
-from . import CNS, SeparableCNS, EmptyLayer, SELayer, WSConv2d
+from . import CNS, SeparableCNS, EmptyLayer, SELayer, WSConv2d, DropConnect
 
 
 class ResBlock(nn.Module):
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 ksize=3,
-                 stride=1,
-                 dilation=1,
-                 reps=1):
+    def __init__(
+            self,
+            in_channels,
+            out_channels,
+            ksize=3,
+            stride=1,
+            dilation=1,
+            drop_rate=0.2,
+            se=True,
+            reps=1,
+    ):
         super(ResBlock, self).__init__()
-        blocks = [SeparableCNS(in_channels, out_channels, ksize, stride, dilation)]
+        blocks = [
+            SeparableCNS(in_channels, out_channels, ksize, stride, dilation,
+                         drop_rate, se)
+        ]
         for i in range(reps):
             blocks.append(
-                ResConv(out_channels, out_channels, ksize, 1, dilation))
+                ResConv(out_channels, out_channels, ksize, 1, dilation,
+                        drop_rate, se))
         self.blocks = nn.Sequential(*blocks)
 
     def forward(self, x):
@@ -29,9 +37,9 @@ class ResConv(nn.Module):
                  ksize=3,
                  stride=1,
                  dilation=1,
-                 drop_rate=0):
+                 drop_rate=0.2,
+                 se=True):
         super(ResConv, self).__init__()
-        self.drop_rate = drop_rate
         if stride == 1 and in_channels == out_channels:
             self.add = True
         else:
@@ -48,7 +56,9 @@ class ResConv(nn.Module):
                          stride=1,
                          dilation=dilation,
                          activate=False),
-            # SELayer(out_channels),
+            SELayer(out_channels) if se else EmptyLayer(),
+            DropConnect(drop_rate)
+            if drop_rate > 0 and self.add else EmptyLayer(),
         )
 
     def forward(self, x):

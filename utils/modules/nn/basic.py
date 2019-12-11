@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from . import Mish, WSConv2d, EmptyLayer, AdaGroupNorm
+from . import Swish, WSConv2d, EmptyLayer, AdaGroupNorm
 
 
 class CNS(nn.Module):
@@ -26,7 +26,7 @@ class CNS(nn.Module):
                       dilation=dilation,
                       bias=False),
             nn.BatchNorm2d(out_channels),
-            Mish() if activate else EmptyLayer(),
+            Swish() if activate else EmptyLayer(),
         )
 
     def forward(self, x):
