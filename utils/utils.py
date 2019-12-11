@@ -1,8 +1,8 @@
 import torch.nn as nn
 import numpy as np
 import cv2
-from .modules.nn import FocalBCELoss
-from .modules.datasets import VOC_COLORMAP
+from pytorch_modules.nn import FocalBCELoss
+from pytorch_modules.datasets import VOC_COLORMAP
 
 CE = nn.CrossEntropyLoss()
 BCE = nn.BCEWithLogitsLoss()
