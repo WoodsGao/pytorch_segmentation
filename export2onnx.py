@@ -1,4 +1,4 @@
-from models import DeepLabV3Plus
+from utils.models import DeepLabV3Plus
 import cv2
 import onnx
 import torch
