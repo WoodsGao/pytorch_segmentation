@@ -28,15 +28,12 @@ def train(data_dir,
     os.makedirs('weights', exist_ok=True)
     train_dir = osp.join(data_dir, 'train.txt')
     val_dir = osp.join(data_dir, 'valid.txt')
+
     train_data = SegDataset(
         train_dir,
         img_size=img_size,
         augments=TRAIN_AUGS,
     )
-    if not notest:
-        val_data = SegDataset(val_dir, img_size=img_size)
-    if dist.is_initialized():
-        dist.barrier()
     train_loader = DataLoader(
         train_data,
         batch_size=batch_size,
@@ -49,6 +46,7 @@ def train(data_dir,
     )
     train_fetcher = Fetcher(train_loader, train_data.post_fetch_fn)
     if not notest:
+        val_data = SegDataset(val_dir, img_size=img_size)
         val_loader = DataLoader(
             val_data,
             batch_size=batch_size,
@@ -69,6 +67,8 @@ def train(data_dir,
     else:
         model = DeepLabV3Plus(len(train_data.classes))
 
+    if dist.is_initialized():
+        dist.barrier()
     trainer = Trainer(model,
                       train_fetcher,
                       compute_loss,
