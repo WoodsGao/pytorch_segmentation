@@ -150,8 +150,6 @@ class SegDataset(torch.utils.data.Dataset):
         imgs, segs = batch
         imgs = imgs.float()
         imgs /= 255.
-        segs = F.one_hot(segs.long(), len(self.classes)).permute(0, 3, 1,
-                                                                 2).float()
         if self.multi_scale:
             h = imgs.size(2)
             w = imgs.size(3)
@@ -159,4 +157,4 @@ class SegDataset(torch.utils.data.Dataset):
             h = int(h * scale / 16) * 16
             w = int(w * scale / 16) * 16
             imgs = F.interpolate(imgs, (h, w))
-        return (imgs, segs)
+        return (imgs, segs.long())

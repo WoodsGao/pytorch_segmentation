@@ -11,10 +11,10 @@ focal = FocalBCELoss()
 
 
 def compute_loss(outputs, targets, model):
-    outputs = F.interpolate(outputs, (targets.size(2), targets.size(3)),
+    outputs = F.interpolate(outputs, (targets.size(1), targets.size(2)),
                             mode='bilinear',
                             align_corners=True)
-    loss = CE(outputs, targets.max(1)[1])
+    loss = CE(outputs, targets)
     return loss
 
 
