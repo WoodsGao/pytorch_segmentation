@@ -1,57 +1,53 @@
 import os
+import os.path as osp
 import argparse
 from tqdm import tqdm
-import torch
-from utils.models import DeepLabV3Plus
-from pytorch_modules.utils import device, IMG_EXT
-from pytorch_modules.datasets import VOC_COLORMAP
 import numpy as np
 import cv2
+import torch
+from utils.models import DeepLabV3Plus
+from utils.inference import inference
+from utils.datasets import VOC_COLORMAP
+from pytorch_modules.utils import device, IMG_EXT
 
 
-def inference(img_dir='data/samples',
-              img_size=256,
-              output_dir='outputs',
-              weights='weights/best_miou.pt',
-              unet=False):
+def run(img_dir='data/samples',
+        img_size=(512, 512),
+        num_classes=21,
+        output_dir='outputs',
+        weights='weights/best.pt'):
     os.makedirs(output_dir, exist_ok=True)
-    model = DeepLabV3Plus(32)
-    model = model.to(device)
-    state_dict = torch.load(weights, map_location=device)
+    model = DeepLabV3Plus(num_classes)
+    state_dict = torch.load(weights, map_location='cpu')
     model.load_state_dict(state_dict['model'])
+    model = model.to(device)
     model.eval()
-    names = [
-        n for n in os.listdir(img_dir)
-        if os.path.splitext(n)[1] in IMG_EXT
-    ]
-    with torch.no_grad():
-        for name in tqdm(names):
-            path = os.path.join(img_dir, name)
-            img = cv2.imread(path)
-            img_shape = img.shape
-            h = (img.shape[0] / max(img.shape[:2]) * img_size) // 32
-            w = (img.shape[1] / max(img.shape[:2]) * img_size) // 32
-            img = cv2.resize(img, (int(w * 32), int(h * 32)))
-            img = img[:, :, ::-1]
-            img = img.transpose(2, 0, 1)
-            img = torch.FloatTensor([img]).to(device) / 255.
-            output = model(img)[0].cpu().numpy().transpose(1, 2, 0)
-            output = cv2.resize(output, (img_shape[1], img_shape[0]))
-            output = output.argmax(2)
-            seg = np.zeros(img_shape, dtype=np.uint8)
-            for ci, color in enumerate(VOC_COLORMAP):
-                seg[output == ci] = color
-            cv2.imwrite(os.path.join(output_dir, name), seg)
+    names = [n for n in os.listdir(img_dir) if osp.splitext(n)[1] in IMG_EXT]
+    for name in tqdm(names):
+        path = osp.join(img_dir, name)
+        img = cv2.imread(path)
+        segmap = inference(model, [img], img_size)[0]
+        seg = np.zeros(img.shape, dtype=np.uint8)
+        for ci, color in enumerate(VOC_COLORMAP):
+            seg[segmap == ci] = color
+        cv2.imwrite(osp.join(output_dir, osp.splitext(name)[0] + '.png'), seg)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--img-dir', type=str, default='data/samples')
-    parser.add_argument('--output-dir', type=str, default='outputs')
-    parser.add_argument('--img-size', type=int, default=256)
+    parser.add_argument('--src', type=str, default='data/samples')
+    parser.add_argument('--dst', type=str, default='outputs')
+    parser.add_argument('--img-size', type=str, default='512')
+    parser.add_argument('--num-classes', type=int, default=21)
     parser.add_argument('--weights', type=str, default='weights/best.pt')
     opt = parser.parse_args()
-    inference(opt.img_dir,
-              opt.img_size,
-              opt.output_dir,
-              opt.weights)
+    print(opt)
+
+    img_size = opt.img_size.split(',')
+    assert len(img_size) in [1, 2]
+    if len(img_size) == 1:
+        img_size = [int(img_size[0])] * 2
+    else:
+        img_size = [int(x) for x in img_size]
+
+    inference(opt.src, tuple(img_size), opt.num_classes, opt.dst, opt.weights)

@@ -1,54 +1,42 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from pytorch_modules.nn import Aspp, Swish, CNS, EmptyLayer, MbBlock, ResBlock
-from pytorch_modules.backbones import BasicModel, EfficientNet, ResNet
+from pytorch_modules.nn import Aspp, Swish, ConvNormAct
+from pytorch_modules.backbones import BasicModel
+from pytorch_modules.backbones.efficientnet import efficientnet
+from pytorch_modules.backbones.resnet import resnet50
 import math
 
 
 class DeepLabV3Plus(BasicModel):
     def __init__(self, num_classes):
         super(DeepLabV3Plus, self).__init__()
-        self.backbone = EfficientNet(0)
-        self.backbone.block5 = nn.Sequential(
-            MbBlock(
-                self.backbone.width[5],
-                self.backbone.width[6],
-                5,
-                dilation=2,
-                reps=self.backbone.depth[-1],
-            ),
-            MbBlock(
-                self.backbone.width[6],
-                self.backbone.width[6],
-                5,
-                dilation=4,
-                reps=self.backbone.depth[-1],
-            ),
-            MbBlock(
-                self.backbone.width[6],
-                self.backbone.width[7],
-                3,
-                dilation=8,
-                reps=self.backbone.depth[-1],
-            ),
-        )
-        self.aspp = Aspp(self.backbone.out_channels[-1], 128, [6, 12, 18])
-        self.cls_conv = nn.Sequential(
-            nn.Conv2d(128 + self.backbone.out_channels[1],
-                      num_classes,
-                      3,
-                      padding=1))
+        self.stages = efficientnet(
+            4,
+            pretrained=True,
+            replace_stride_with_dilation=[False, False, True]).stages
+        self.aspp = Aspp(448, 256, [6, 12, 18])
+        self.project = ConvNormAct(32, 48, 1)
+        self.cls_conv = nn.Sequential(nn.Conv2d(304, num_classes, 3,
+                                                padding=1))
         # init weight and bias
-        self.init()
+        self._initialize_weights(self.aspp)
+        self._initialize_weights(self.project)
+        self._initialize_weights(self.cls_conv)
 
     def forward(self, x):
-        x = self.backbone.block1(x)
-        x = self.backbone.block2(x)
-        low = x
-        x = self.backbone.block3(x)
-        x = self.backbone.block4(x)
-        x = self.backbone.block5(x)
+        # freeze 0-3bn
+        self.freeze_bn(self.stages[:5])
+        # freeze 0,1 stage
+        self.freeze(self.stages[0:2])
+
+        x = self.stages[0](x)
+        x = self.stages[1](x)
+        low = self.project(x)
+        x = self.stages[2](x)
+        x = self.stages[3](x)
+        x = self.stages[4](x)
+
         x = self.aspp(x)
         x = F.interpolate(x,
                           scale_factor=4,
@@ -66,36 +54,47 @@ class DeepLabV3Plus(BasicModel):
 class UNet(BasicModel):
     def __init__(self, num_classes):
         super(UNet, self).__init__()
-        self.backbone = EfficientNet(4)
-        self.backbone.block5 = EmptyLayer()
-        self.up_conv4 = CNS(160, 56)
-        self.up_conv3 = CNS(112, 32)
-        self.up_conv2 = CNS(64, 24)
-        self.cls_conv = nn.Conv2d(48, num_classes, 3, padding=1)
+        self.stages = efficientnet(
+            4,
+            pretrained=True,
+            replace_stride_with_dilation=[False, False, True]).stages
+        self.up_convs = nn.ModuleList([
+            ConvNormAct(448, 128),
+            ConvNormAct(184, 112),
+            ConvNormAct(144, 96)
+        ])
+        self.cls_conv = nn.Conv2d(120, num_classes, 3, padding=1)
+        # freeze first stage
+        self.freeze(self.stages[0])
         # init weight and bias
-        self.init()
+        self._initialize_weights(self.up_convs)
+        self._initialize_weights(self.cls_conv)
 
     def forward(self, x):
-        x = self.backbone.block1(x)
+        # freeze bn
+        self.freeze_bn(self.stages)
+
+        x = self.stages[0](x)
         x1 = x
-        x = self.backbone.block2(x)
+        x = self.stages[1](x)
         x2 = x
-        x = self.backbone.block3(x)
+        x = self.stages[2](x)
         x3 = x
-        x = self.backbone.block4(x)
-        x = self.up_conv4(x)
+        x = self.stages[3](x)
+        x = self.stages[4](x)
+        x = self.up_convs[0](x)
         x = F.interpolate(x,
                           scale_factor=2,
                           mode='bilinear',
                           align_corners=True)
         x = torch.cat([x, x3], 1)
-        x = self.up_conv3(x)
+        x = self.up_convs[1](x)
         x = F.interpolate(x,
                           scale_factor=2,
                           mode='bilinear',
                           align_corners=True)
         x = torch.cat([x, x2], 1)
-        x = self.up_conv2(x)
+        x = self.up_convs[2](x)
         x = F.interpolate(x,
                           scale_factor=2,
                           mode='bilinear',

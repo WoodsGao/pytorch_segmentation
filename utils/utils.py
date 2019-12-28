@@ -1,8 +1,9 @@
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 import cv2
 from pytorch_modules.nn import FocalBCELoss
-from pytorch_modules.datasets import VOC_COLORMAP
+from .datasets import VOC_COLORMAP
 
 CE = nn.CrossEntropyLoss()
 BCE = nn.BCEWithLogitsLoss()
@@ -10,6 +11,9 @@ focal = FocalBCELoss()
 
 
 def compute_loss(outputs, targets, model):
+    outputs = F.interpolate(outputs, (targets.size(2), targets.size(3)),
+                            mode='bilinear',
+                            align_corners=True)
     loss = CE(outputs, targets.max(1)[1])
     return loss
 

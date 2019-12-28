@@ -1,25 +1,20 @@
-from find_segment_classes import find_segment_classes
-import subprocess
 import argparse
 import os
+import os.path as osp
+import find_color_map
 
 
 def voc2dataset(data_dir):
     cmd = [
-        'rm data/voc', 
-        'mkdir data', 
-        'mkdir data/voc', 
-        'cp {} data/voc/', 
-        'cp {} data/voc/', 
-        'mkdir data/voc/images data/voc/labels', 
-        'cp {}/* data/voc/images', 
-        'cp {}/* data/voc/labels'
+        'rm data/voc', 'mkdir data', 'mkdir data/voc', 'cp {} data/voc/',
+        'cp {} data/voc/', 'mkdir data/voc/images data/voc/labels',
+        'cp {}/* data/voc/images', 'cp {}/* data/voc/labels'
     ]
-    subprocess.call('\n'.join(cmd).format(
-        os.path.join(data_dir, 'VOC2012/ImageSets/Segmentation/train.txt'),
-        os.path.join(data_dir, 'VOC2012/ImageSets/Segmentation/valid.txt'),
-        os.path.join(data_dir, 'VOC2012/JPEGImages'),
-        os.path.join(data_dir, 'VOC2012/SegmentationClass')), shell=True, universal_newlines=True)
+    os.system(' && '.join(cmd).format(
+        osp.join(data_dir, 'VOC2012/ImageSets/Segmentation/train.txt'),
+        osp.join(data_dir, 'VOC2012/ImageSets/Segmentation/valid.txt'),
+        osp.join(data_dir, 'VOC2012/JPEGImages'),
+        osp.join(data_dir, 'VOC2012/SegmentationClass')))
     with open('data/voc/train.txt', 'r') as f:
         lines = f.read().split('\n')
     lines = [l + '.jpg' for l in lines]
@@ -30,13 +25,11 @@ def voc2dataset(data_dir):
     lines = [l + '.jpg' for l in lines]
     with open('data/voc/val.txt', 'w') as f:
         f.write('\n'.join(lines))
-    find_segment_classes('data/voc')
+    find_color_map.run('data/voc')
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-p',
-                        '--path',
-                        default='/home/uisee/Datasets/VOCdevkit')
+    parser.add_argument('path', default='.VOCdevkit')
     args = parser.parse_args()
     voc2dataset(args.path)
