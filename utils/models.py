@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from pytorch_modules.nn import Aspp, Swish, ConvNormAct
+from pytorch_modules.nn import Aspp, Swish, ConvNormAct, SeparableConv
 from pytorch_modules.backbones import BasicModel
 from pytorch_modules.backbones.efficientnet import efficientnet
 from pytorch_modules.backbones.resnet import resnet50
@@ -16,12 +16,10 @@ class DeepLabV3Plus(BasicModel):
             pretrained=True,
             replace_stride_with_dilation=[False, False, True]).stages
         self.aspp = Aspp(448, 256, [6, 12, 18])
-        self.project = ConvNormAct(32, 48, 1)
-        self.cls_conv = nn.Sequential(nn.Conv2d(304, num_classes, 3,
-                                                padding=1))
+        self.cls_conv = SeparableConv(288, num_classes)
         # init weight and bias
         self._initialize_weights(self.aspp)
-        self._initialize_weights(self.project)
+        # self._initialize_weights(self.project)
         self._initialize_weights(self.cls_conv)
 
     def forward(self, x):
@@ -32,7 +30,8 @@ class DeepLabV3Plus(BasicModel):
 
         x = self.stages[0](x)
         x = self.stages[1](x)
-        low = self.project(x)
+        # low = self.project(x)
+        low = x
         x = self.stages[2](x)
         x = self.stages[3](x)
         x = self.stages[4](x)

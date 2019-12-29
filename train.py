@@ -33,6 +33,7 @@ def train(data_dir,
         train_dir,
         img_size=img_size,
         augments=TRAIN_AUGS,
+        multi_scale=multi_scale
     )
     train_loader = DataLoader(
         train_data,
