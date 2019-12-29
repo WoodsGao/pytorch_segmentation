@@ -9,7 +9,6 @@ from utils.models import DeepLabV3Plus
 from utils.utils import compute_loss
 from utils.datasets import SegDataset, TRAIN_AUGS
 from pytorch_modules.utils import Trainer, Fetcher
-from pytorch_modules.nn import SeparableConv
 from test import test
 
 
