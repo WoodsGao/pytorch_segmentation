@@ -63,14 +63,7 @@ def train(data_dir,
         w = torch.load('weights/voc480.pt')
         model = DeepLabV3Plus(21)
         model.load_state_dict(w['model'])
-        if len(train_data.classes) <= 21:
-            model.cls_conv[1].weight = model.cls_conv[1].weight[:len(train_data
-                                                                     .classes)]
-        else:
-            model.cls_conv[1].weight = torch.cat([
-                model.cls_conv[1].weight,
-                torch.randn([len(train_data.classes) - 21, 288, 1, 1])
-            ], 0)
+        model.cls_conv[1] = nn.Conv2d(288, len(train_data.classes), 1)
     else:
         model = DeepLabV3Plus(len(train_data.classes))
 
