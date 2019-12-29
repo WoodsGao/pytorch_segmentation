@@ -14,7 +14,7 @@ from test import test
 
 def train(data_dir,
           epochs=100,
-          img_size=224,
+          img_size=(512, 512),
           batch_size=8,
           accumulate=2,
           lr=1e-3,
