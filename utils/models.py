@@ -18,9 +18,9 @@ class DeepLabV3Plus(BasicModel):
         self.aspp = Aspp(448, 256, [6, 12, 18])
         self.cls_conv = SeparableConv(288, num_classes)
         # init weight and bias
-        self._initialize_weights(self.aspp)
-        # self._initialize_weights(self.project)
-        self._initialize_weights(self.cls_conv)
+        self.initialize_weights(self.aspp)
+        # self.initialize_weights(self.project)
+        self.initialize_weights(self.cls_conv)
 
     def forward(self, x):
         # freeze 0-3bn
@@ -66,8 +66,8 @@ class UNet(BasicModel):
         # freeze first stage
         self.freeze(self.stages[0])
         # init weight and bias
-        self._initialize_weights(self.up_convs)
-        self._initialize_weights(self.cls_conv)
+        self.initialize_weights(self.up_convs)
+        self.initialize_weights(self.cls_conv)
 
     def forward(self, x):
         # freeze bn

@@ -6,9 +6,10 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, DistributedSampler
 import torch.distributed as dist
 from utils.models import DeepLabV3Plus
-from pytorch_modules.utils import Trainer, Fetcher
 from utils.utils import compute_loss
 from utils.datasets import SegDataset, TRAIN_AUGS
+from pytorch_modules.utils import Trainer, Fetcher
+from pytorch_modules.nn import SeparableConv
 from test import test
 
 
@@ -64,6 +65,8 @@ def train(data_dir,
         w = torch.load('weights/voc480.pt')
         model = DeepLabV3Plus(21)
         model.load_state_dict(w['model'])
+        if len(train_data.classes) <= 21:
+            model.cls_conv[1].weight = model.cls_conv[1].weight[:len(train_data.classes)]
         model.cls_conv = nn.Conv2d(304, len(train_data.classes), 3, padding=1)
     else:
         model = DeepLabV3Plus(len(train_data.classes))
