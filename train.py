@@ -30,12 +30,10 @@ def train(data_dir,
     train_dir = osp.join(data_dir, 'train.txt')
     val_dir = osp.join(data_dir, 'valid.txt')
 
-    train_data = SegDataset(
-        train_dir,
-        img_size=img_size,
-        augments=TRAIN_AUGS,
-        multi_scale=multi_scale
-    )
+    train_data = SegDataset(train_dir,
+                            img_size=img_size,
+                            augments=TRAIN_AUGS,
+                            multi_scale=multi_scale)
     train_loader = DataLoader(
         train_data,
         batch_size=batch_size,
@@ -66,8 +64,13 @@ def train(data_dir,
         model = DeepLabV3Plus(21)
         model.load_state_dict(w['model'])
         if len(train_data.classes) <= 21:
-            model.cls_conv[1].weight = model.cls_conv[1].weight[:len(train_data.classes)]
-        model.cls_conv = nn.Conv2d(304, len(train_data.classes), 3, padding=1)
+            model.cls_conv[1].weight = model.cls_conv[1].weight[:len(train_data
+                                                                     .classes)]
+        else:
+            model.cls_conv[1].weight = torch.cat([
+                model.cls_conv[1].weight,
+                torch.randn([len(train_data.classes) - 21, 288, 1, 1])
+            ], 0)
     else:
         model = DeepLabV3Plus(len(train_data.classes))
 
