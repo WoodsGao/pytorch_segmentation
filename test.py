@@ -26,11 +26,11 @@ def test(model, fetcher):
         outputs = model(inputs)
         loss = compute_loss(outputs, targets, model)
         val_loss += loss.item()
-        predicted = outputs
+        predicted = outputs.max(1)[1]
         if idx == 0:
             show_batch(inputs.cpu(), predicted.cpu())
-        predicted = predicted.max(1)[1].view(-1)
-        targets = targets.max(1)[1].view(-1)
+        predicted = predicted.view(-1)
+        targets = targets.view(-1)
         eq = predicted.eq(targets)
         total_size += predicted.size(0)
         for c_i, c in enumerate(classes):
