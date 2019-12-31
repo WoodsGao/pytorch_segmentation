@@ -24,7 +24,8 @@ class DeepLabV3Plus(BasicModel):
         self.fuse_bn(replace_by_gn=True)
 
     def forward(self, x):
-
+        x = self.imagenet_normalize(x)
+        
         x = self.stages[0](x)
         x = self.stages[1](x)
         low = self.project(x)
