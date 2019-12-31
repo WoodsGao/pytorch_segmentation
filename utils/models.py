@@ -11,27 +11,23 @@ import math
 class DeepLabV3Plus(BasicModel):
     def __init__(self, num_classes):
         super(DeepLabV3Plus, self).__init__()
-        self.stages = efficientnet(
-            4,
+        self.stages = resnet50(
             pretrained=True,
             replace_stride_with_dilation=[False, False, True]).stages
-        self.aspp = Aspp(448, 256, [6, 12, 18])
-        self.cls_conv = SeparableConv(288, num_classes)
+        self.project = ConvNormAct(256, 48)
+        self.aspp = Aspp(2048, 256, [6, 12, 18])
+        self.cls_conv = nn.Conv2d(304, num_classes, 3, padding=1)
         # init weight and bias
         self.initialize_weights(self.aspp)
-        # self.initialize_weights(self.project)
+        self.initialize_weights(self.project)
         self.initialize_weights(self.cls_conv)
+        self.fuse_bn(replace_by_gn=True)
 
     def forward(self, x):
-        # freeze 0-3bn
-        self.freeze_bn(self.stages[:5])
-        # freeze 0,1 stage
-        self.freeze(self.stages[0:2])
 
         x = self.stages[0](x)
         x = self.stages[1](x)
-        # low = self.project(x)
-        low = x
+        low = self.project(x)
         x = self.stages[2](x)
         x = self.stages[3](x)
         x = self.stages[4](x)
