@@ -1,5 +1,6 @@
 import os
 import os.path as osp
+import shutil
 import argparse
 from tqdm import tqdm
 import numpy as np
@@ -16,6 +17,7 @@ def run(img_dir='data/samples',
         num_classes=21,
         output_dir='outputs',
         weights='weights/best.pt'):
+    shutil.rmtree(output_dir, ignore_errors=True)
     os.makedirs(output_dir, exist_ok=True)
     model = DeepLabV3Plus(num_classes)
     state_dict = torch.load(weights, map_location='cpu')
@@ -51,4 +53,4 @@ if __name__ == "__main__":
     else:
         img_size = [int(x) for x in img_size]
 
-    inference(opt.src, tuple(img_size), opt.num_classes, opt.dst, opt.weights)
+    run(opt.src, tuple(img_size), opt.num_classes, opt.dst, opt.weights)
