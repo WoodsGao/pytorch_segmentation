@@ -23,6 +23,7 @@ def run(img_dir='data/samples',
     model = model.to(device)
     model.eval()
     names = [n for n in os.listdir(img_dir) if osp.splitext(n)[1] in IMG_EXT]
+    names.sort()
     for name in tqdm(names):
         path = osp.join(img_dir, name)
         img = cv2.imread(path)
