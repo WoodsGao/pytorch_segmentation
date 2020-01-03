@@ -62,7 +62,7 @@ def train(data_dir,
         w = torch.load('weights/voc480.pt')
         model = DeepLabV3Plus(21)
         model.load_state_dict(w['model'])
-        model.cls_conv[1] = nn.Conv2d(288, len(train_data.classes), 1)
+        model.cls_conv = nn.Conv2d(304, len(train_data.classes), 3, padding=1)
     else:
         model = DeepLabV3Plus(len(train_data.classes))
 
