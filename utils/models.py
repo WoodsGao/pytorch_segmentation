@@ -2,30 +2,30 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from pytorch_modules.nn import Aspp, Swish, ConvNormAct, SeparableConv
-from pytorch_modules.backbones import BasicModel
+from pytorch_modules.backbones import initialize_weights, imagenet_normalize
 from pytorch_modules.backbones.efficientnet import efficientnet
 from pytorch_modules.backbones.resnet import resnet50
 import math
 
 
-class DeepLabV3Plus(BasicModel):
+class DeepLabV3Plus(nn.Module):
     def __init__(self, num_classes):
         super(DeepLabV3Plus, self).__init__()
-        self.stages = resnet50(
+        self.stages = efficientnet(
+            2,
             pretrained=True,
             replace_stride_with_dilation=[False, False, True]).stages
-        self.project = ConvNormAct(256, 48)
-        self.aspp = Aspp(2048, 256, [6, 12, 18])
+        self.project = ConvNormAct(24, 48, 1)
+        self.aspp = Aspp(352, 256, [6, 12, 18])
         self.cls_conv = nn.Conv2d(304, num_classes, 3, padding=1)
         # init weight and bias
-        self.initialize_weights(self.aspp)
-        self.initialize_weights(self.project)
-        self.initialize_weights(self.cls_conv)
-        self.fuse_bn(replace_by_gn=True)
+        initialize_weights(self.aspp)
+        initialize_weights(self.project)
+        initialize_weights(self.cls_conv)
 
     def forward(self, x):
-        x = self.imagenet_normalize(x)
-        
+        x = imagenet_normalize(x)
+
         x = self.stages[0](x)
         x = self.stages[1](x)
         low = self.project(x)
@@ -47,7 +47,7 @@ class DeepLabV3Plus(BasicModel):
         return x
 
 
-class UNet(BasicModel):
+class UNet(nn.Module):
     def __init__(self, num_classes):
         super(UNet, self).__init__()
         self.stages = efficientnet(
@@ -60,16 +60,11 @@ class UNet(BasicModel):
             ConvNormAct(144, 96)
         ])
         self.cls_conv = nn.Conv2d(120, num_classes, 3, padding=1)
-        # freeze first stage
-        self.freeze(self.stages[0])
-        # init weight and bias
-        self.initialize_weights(self.up_convs)
-        self.initialize_weights(self.cls_conv)
+        initialize_weights(self.up_convs)
+        initialize_weights(self.cls_conv)
 
     def forward(self, x):
-        # freeze bn
-        self.freeze_bn(self.stages)
-
+        x = imagenet_normalize(x)
         x = self.stages[0](x)
         x1 = x
         x = self.stages[1](x)
