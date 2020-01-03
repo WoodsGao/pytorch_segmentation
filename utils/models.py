@@ -2,9 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from pytorch_modules.nn import Aspp, Swish, ConvNormAct, SeparableConv
-from pytorch_modules.backbones import initialize_weights, imagenet_normalize
-from pytorch_modules.backbones.efficientnet import efficientnet
-from pytorch_modules.backbones.resnet import resnet50
+from pytorch_modules.utils import initialize_weights
+from pytorch_modules.backbones import efficientnet, resnet50, imagenet_normalize
 import math
 
 
