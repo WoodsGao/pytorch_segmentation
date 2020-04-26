@@ -19,7 +19,7 @@ Implementation of some semantic segmentation models with pytorch, including Deep
     cd pytorch_segmentation
     pip install -r requirements.txt
 
-## Turtial
+## Tutorials
 
 ### Create custom data
 
