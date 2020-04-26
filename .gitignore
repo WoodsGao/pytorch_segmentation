@@ -6,6 +6,11 @@ __pycache__/
 # C extensions
 *.so
 
+*.pt
+*.pth
+*.caffemodel
+*.prototxt
+
 # tensorboard
 runs/
 tmp/

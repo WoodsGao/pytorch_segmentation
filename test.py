@@ -3,7 +3,7 @@ import torch.distributed as dist
 from torch.utils.data import DataLoader
 from pytorch_modules.utils import device, Fetcher
 from utils.models import DeepLabV3Plus
-from utils.datasets import SegDataset
+from utils.datasets import CocoDataset
 from utils.utils import compute_loss, show_batch, compute_metrics
 from tqdm import tqdm
 import argparse
@@ -73,7 +73,7 @@ def test(model, fetcher):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--val-list', type=str, default='data/voc/valid.txt')
+    parser.add_argument('--coco', type=str, default='data/coco.json')
     parser.add_argument('--img-size', type=str, default='512')
     parser.add_argument('--batch-size', type=int, default=4)
     parser.add_argument('--weights', type=str, default='')
@@ -87,7 +87,7 @@ if __name__ == "__main__":
     else:
         img_size = [int(x) for x in img_size]
 
-    val_data = SegDataset(opt.val_list, img_size=tuple(img_size))
+    val_data = CocoDataset(opt.coco, img_size=img_size, augments=None)
     val_loader = DataLoader(
         val_data,
         batch_size=opt.batch_size,

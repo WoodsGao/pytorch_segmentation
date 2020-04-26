@@ -8,9 +8,10 @@ Implementation of some semantic segmentation models with pytorch, including Deep
 
  - Advanced neural network models
  - Flexible and efficient toolkit(See [woodsgao/pytorch_modules](https://github.com/woodsgao/pytorch_modules))
- - Online data augmenting(See [woodsgao/image_augments](https://github.com/woodsgao/image_augments))
+ - Online data augmenting(by imgaug)
  - Mixed precision training(If you have already installed [apex](https://github.com/NVIDIA/apex))
  - Efficient distributed training(0.8x faster when using two 2080ti)
+ - Add a script to convert to caffe model(By [woodsgao/pytorch2caffe](https://github.com/woodsgao/pytorch2caffe))
 
 ## Installation
 
@@ -18,30 +19,21 @@ Implementation of some semantic segmentation models with pytorch, including Deep
     cd pytorch_segmentation
     pip install -r requirements.txt
 
-## Usage
+## Turtial
 
 ### Create custom data
 
-Please organize your data in the following format:
+Please organize your data in coco format(by default):
 
     data/
         <custom>/
             images/
-                0001.png
-                0002.png
-                ...
-            labels/
-                0001.png
-                0002.png
-                ...
-            classes.names
+            coco.json
+            train.json
+            val.json
 
-The content of `classes.names` is:
-
-    <class_name_1>
-    ...
-            
-Then execute `python3 split_dataset.py data/<custom>`.It splits the data into training and validation sets and generates `data/<custom>/train.txt` and `data/<custom>/valid.txt`.
+You can use `split_coco_json.py` from [woodsgao/cv_utils](https://github.com/woodsgao/cv_utils)
+ to split your `coco.json` file into `train.json` and `val.json`
 
 ### Training
 
@@ -54,8 +46,12 @@ Run the following command in all nodes.Every node will save your weights
 
 ### Testing
 
-    python3 test.py --val-list /data/<custom>/valid.txt
+    python3 test.py --val-list /data/<custom>/val.json
 
 ### Inference
 
     python3 inference.py --img-dir data/samples
+
+### Export to caffe model
+
+    python3 export2caffe.py weights/best.pt --num-classes 21 --img-size 512,512

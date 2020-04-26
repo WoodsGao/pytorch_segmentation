@@ -10,21 +10,18 @@ import math
 class DeepLabV3Plus(nn.Module):
     def __init__(self, num_classes):
         super(DeepLabV3Plus, self).__init__()
-        self.stages = efficientnet(
-            2,
+        self.stages = resnet50(
             pretrained=True,
             replace_stride_with_dilation=[False, False, True]).stages
-        self.project = ConvNormAct(24, 48, 1)
-        self.aspp = Aspp(352, 256, [6, 12, 18])
-        self.cls_conv = nn.Conv2d(304, num_classes, 3, padding=1)
+        self.project = ConvNormAct(256, 128, 1)
+        self.aspp = Aspp(2048, 256, [6, 12, 18])
+        self.cls_conv = nn.Conv2d(384, num_classes, 3, padding=1)
         # init weight and bias
         initialize_weights(self.aspp)
         initialize_weights(self.project)
         initialize_weights(self.cls_conv)
 
     def forward(self, x):
-        x = imagenet_normalize(x)
-
         x = self.stages[0](x)
         x = self.stages[1](x)
         low = self.project(x)

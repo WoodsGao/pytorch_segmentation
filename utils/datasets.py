@@ -1,5 +1,6 @@
 import os
 import os.path as osp
+import json
 import random
 import numpy as np
 import cv2
@@ -77,50 +78,16 @@ def voc_colormap(N=256):
 VOC_COLORMAP = voc_colormap(32)
 
 
-class SegDataset(torch.utils.data.Dataset):
-    def __init__(self,
-                 path,
-                 img_size=224,
-                 augments=None,
-                 multi_scale=False,
-                 colormap=VOC_COLORMAP):
-        super(SegDataset, self).__init__()
-        self.path = path
-        if isinstance(img_size, int):
-            img_size = (img_size, img_size)
-        assert len(img_size) == 2
-        self.img_size = img_size
-        self.multi_scale = multi_scale
-        self.resize = ia.Resize({"height": img_size[1], "width": img_size[0]})
-        self.augments = augments
+class BasicDataset(torch.utils.data.Dataset):
+    def __init__(self):
+        super(BasicDataset, self).__init__()
         self.data = []
-        self.classes = []
-        self.build_data()
-        self.data.sort()
-        self.colormap = colormap
 
-    def build_data(self):
-        data_dir = osp.dirname(self.path)
-        with open(osp.join(data_dir, 'classes.names'), 'r') as f:
-            self.classes = [c for c in f.read().split('\n') if c]
-        image_dir = osp.join(data_dir, 'images')
-        label_dir = osp.join(data_dir, 'labels')
-        with open(self.path, 'r') as f:
-            names = [n for n in f.read().split('\n') if n]
-        names = list(set(names))
-        self.data = [[
-            osp.join(image_dir, name),
-            osp.join(label_dir,
-                     osp.splitext(name)[0] + '.png')
-        ] for name in names if osp.splitext(name)[1] in IMG_EXT]
+    def get_data(self, idx):
+        return None, None
 
-    def get_item(self, idx):
-        img = cv2.imread(self.data[idx][0])
-        seg_color = cv2.imread(self.data[idx][1])
-        seg = np.zeros([seg_color.shape[0], seg_color.shape[1]],
-                       dtype=np.uint8)
-        for ci, c in enumerate(self.colormap):
-            seg[(seg_color == c).all(2)] = ci
+    def __getitem__(self, idx):
+        img, seg = self.get_data(idx)
         seg = SegmentationMapsOnImage(seg, shape=img.shape)
         img = img[:, :, ::-1]
 
@@ -143,13 +110,13 @@ class SegDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.data)
 
-    def __getitem__(self, idx):
-        return self.get_item(idx)
-
     def post_fetch_fn(self, batch):
         imgs, segs = batch
         imgs = imgs.float()
-        imgs /= 255.
+        imgs -= torch.FloatTensor([123.675, 116.28,
+                                   103.53]).reshape(1, 3, 1, 1).to(imgs.device)
+        imgs /= torch.FloatTensor([58.395, 57.12,
+                                   57.375]).reshape(1, 3, 1, 1).to(imgs.device)
         if self.multi_scale:
             h = imgs.size(2)
             w = imgs.size(3)
@@ -158,3 +125,96 @@ class SegDataset(torch.utils.data.Dataset):
             w = int(w * scale / 16) * 16
             imgs = F.interpolate(imgs, (h, w))
         return (imgs, segs.long())
+
+
+class SegImgDataset(BasicDataset):
+    def __init__(self,
+                 path,
+                 img_size=224,
+                 augments=TRAIN_AUGS,
+                 multi_scale=False,
+                 colormap=VOC_COLORMAP):
+        super(SegImgDataset, self).__init__()
+        self.path = path
+        if isinstance(img_size, int):
+            img_size = (img_size, img_size)
+        assert len(img_size) == 2
+        self.img_size = img_size
+        self.multi_scale = multi_scale
+        self.resize = ia.Resize({"height": img_size[1], "width": img_size[0]})
+        self.augments = augments
+        self.classes = []
+        self.build_data()
+        self.data.sort()
+        self.colormap = colormap
+
+    def build_data(self):
+        data_dir = osp.dirname(self.path)
+        with open(osp.join(data_dir, 'classes.names'), 'r') as f:
+            self.classes = [c for c in f.read().split('\n') if c]
+        image_dir = osp.join(data_dir, 'images')
+        label_dir = osp.join(data_dir, 'labels')
+        with open(self.path, 'r') as f:
+            names = [n for n in f.read().split('\n') if n]
+        names = list(set(names))
+        self.data = [[
+            osp.join(image_dir, name),
+            osp.join(label_dir,
+                     osp.splitext(name)[0] + '.png')
+        ] for name in names if osp.splitext(name)[1] in IMG_EXT]
+
+    def get_data(self, idx):
+        img = cv2.imread(self.data[idx][0])
+        seg_color = cv2.imread(self.data[idx][1])
+        seg = np.zeros([seg_color.shape[0], seg_color.shape[1]],
+                       dtype=np.uint8)
+        for ci, c in enumerate(self.colormap):
+            seg[(seg_color == c).all(2)] = ci
+        return img, seg
+
+
+class CocoDataset(BasicDataset):
+    def __init__(self,
+                 path,
+                 img_size=224,
+                 augments=TRAIN_AUGS,
+                 multi_scale=False):
+        super(CocoDataset, self).__init__()
+        with open(path, 'r') as f:
+            self.coco = json.loads(f.read())
+        self.img_root = osp.dirname(path)
+        if isinstance(img_size, int):
+            img_size = (img_size, img_size)
+        assert len(img_size) == 2
+        self.img_size = img_size
+        self.multi_scale = multi_scale
+        self.resize = ia.Resize({"height": img_size[1], "width": img_size[0]})
+        self.augments = augments
+        self.classes = []
+        self.build_data()
+        self.data.sort()
+
+    def build_data(self):
+        img_ids = []
+        img_paths = []
+        img_anns = []
+        self.classes = ['background'
+                        ] + [c['name'] for c in self.coco['categories']]
+        for img_info in self.coco['images']:
+            img_ids.append(img_info['id'])
+            img_paths.append(osp.join(self.img_root, img_info['file_name']))
+            img_anns.append([])
+        for ann in self.coco['annotations']:
+            idx = ann['image_id']
+            idx = img_ids.index(idx)
+            img_anns[idx].append(ann)
+        self.data = list(zip(img_paths, img_anns))
+
+    def get_data(self, idx):
+        img = cv2.imread(self.data[idx][0])
+        anns = self.data[idx][1]
+        seg = np.zeros([img.shape[0], img.shape[1]], dtype=np.uint8)
+        for ann in anns:
+            points = np.int64(ann['segmentation']).reshape(-1, 2)
+            seg = cv2.fillPoly(seg, [points], ann['category_id'] + 1, 0)
+        return img, seg

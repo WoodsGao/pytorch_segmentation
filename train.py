@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader, DistributedSampler
 import torch.distributed as dist
 from utils.models import DeepLabV3Plus
 from utils.utils import compute_loss
-from utils.datasets import SegDataset, TRAIN_AUGS
+from utils.datasets import CocoDataset
 from pytorch_modules.utils import Trainer, Fetcher
 from test import test
 
@@ -26,13 +26,12 @@ def train(data_dir,
           mixed_precision=False,
           nosave=False):
     os.makedirs('weights', exist_ok=True)
-    train_dir = osp.join(data_dir, 'train.txt')
-    val_dir = osp.join(data_dir, 'valid.txt')
+    train_coco = osp.join(data_dir, 'train.json')
+    val_coco = osp.join(data_dir, 'val.json')
 
-    train_data = SegDataset(train_dir,
-                            img_size=img_size,
-                            augments=TRAIN_AUGS,
-                            multi_scale=multi_scale)
+    train_data = CocoDataset(train_coco,
+                             img_size=img_size,
+                             multi_scale=multi_scale)
     train_loader = DataLoader(
         train_data,
         batch_size=batch_size,
@@ -45,7 +44,7 @@ def train(data_dir,
     )
     train_fetcher = Fetcher(train_loader, train_data.post_fetch_fn)
     if not notest:
-        val_data = SegDataset(val_dir, img_size=img_size)
+        val_data = CocoDataset(val_coco, img_size=img_size, augments=None)
         val_loader = DataLoader(
             val_data,
             batch_size=batch_size,
@@ -59,7 +58,7 @@ def train(data_dir,
         val_fetcher = Fetcher(val_loader, post_fetch_fn=val_data.post_fetch_fn)
 
     if osp.exists('weights/voc480.pt') and not weights:
-        w = torch.load('weights/voc480.pt')
+        w = torch.load('weights/voc480.pt', map_location='cpu')
         model = DeepLabV3Plus(21)
         model.load_state_dict(w['model'])
         model.cls_conv = nn.Conv2d(304, len(train_data.classes), 3, padding=1)
@@ -98,8 +97,8 @@ if __name__ == "__main__":
     parser.add_argument('--data', type=str, default='data/voc')
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--img-size', type=str, default='512')
-    parser.add_argument('--batch-size', type=int, default=4)
-    parser.add_argument('--accumulate', type=int, default=8)
+    parser.add_argument('-bs', '--batch-size', type=int, default=4)
+    parser.add_argument('-a', '--accumulate', type=int, default=8)
     parser.add_argument('--num-workers', type=int, default=4)
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--adam', action='store_true')
