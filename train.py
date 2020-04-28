@@ -108,7 +108,7 @@ if __name__ == "__main__":
     parser.add_argument('--num-workers', type=int, default=4)
     parser.add_argument('--multi-scale', action='store_true')
     parser.add_argument('--rect', action='store_true')
-    parser.add_argument('--mp', action='store_true', help='mixed precision')
+    parser.add_argument('-mp', '--mix_precision', action='store_true', help='mixed precision')
     parser.add_argument('--notest', action='store_true')
     parser.add_argument('--nosave', action='store_true')
     parser.add_argument('--backend', type=str, default='nccl')
