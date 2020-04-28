@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
@@ -21,9 +22,15 @@ def compute_loss(outputs, targets, model):
 def show_batch(inputs, targets):
     imgs = inputs.clone()[:8]
     segs = targets.clone()[:8]
-    imgs *= 255.
-    imgs = imgs.clamp(0, 255).permute(0, 2, 3, 1).byte().numpy()[:, :, :, ::-1]
-    segs = segs.numpy()
+    imgs *= torch.FloatTensor([58.395, 57.12,
+                               57.375]).reshape(1, 3, 1, 1).to(imgs.device)
+    imgs += torch.FloatTensor([123.675, 116.28,
+                               103.53]).reshape(1, 3, 1, 1).to(imgs.device)
+
+    imgs = imgs.clamp(0, 255).permute(0, 2, 3, 1).byte().cpu().numpy()[..., ::-1]
+    imgs = np.ascontiguousarray(imgs)
+    segs = segs.cpu().numpy()
+    segs = np.ascontiguousarray(segs)
     seg_rgb = np.zeros_like(imgs, dtype=np.uint8)
     for ci, color in enumerate(VOC_COLORMAP):
         seg_rgb[segs == ci] = color
