@@ -2,6 +2,4 @@ opencv-python>=3.3
 numpy>=1.11
 torch>=1.0
 tqdm
-tensorflow
-tensorboard
-pytorch-modules>=0.2.5
+pytorch-modules>=0.3.0

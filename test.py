@@ -20,8 +20,8 @@ def test(model, fetcher):
     tp = torch.zeros(num_classes)
     fp = torch.zeros(num_classes)
     fn = torch.zeros(num_classes)
-    pbar = tqdm(enumerate(fetcher), total=len(fetcher))
-    for idx, (inputs, targets) in pbar:
+    pbar = tqdm(fetcher)
+    for idx, (inputs, targets) in enumerate(pbar):
         batch_idx = idx + 1
         outputs = model(inputs)
         loss = compute_loss(outputs, targets, model)

@@ -1,10 +1,12 @@
+import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from pytorch_modules.nn import Aspp, Swish, ConvNormAct, SeparableConv
+
+from pytorch_modules.backbones import resnet50
+from pytorch_modules.nn import Aspp, ConvNormAct, Mish, SeparableConv
 from pytorch_modules.utils import initialize_weights
-from pytorch_modules.backbones import efficientnet, resnet50, imagenet_normalize
-import math
 
 
 class DeepLabV3Plus(nn.Module):
@@ -46,21 +48,19 @@ class DeepLabV3Plus(nn.Module):
 class UNet(nn.Module):
     def __init__(self, num_classes):
         super(UNet, self).__init__()
-        self.stages = efficientnet(
-            4,
+        self.stages = resnet50(
             pretrained=True,
             replace_stride_with_dilation=[False, False, True]).stages
         self.up_convs = nn.ModuleList([
-            ConvNormAct(448, 128),
-            ConvNormAct(184, 112),
-            ConvNormAct(144, 96)
+            ConvNormAct(2048, 512),
+            ConvNormAct(1024, 256),
+            ConvNormAct(512, 128)
         ])
-        self.cls_conv = nn.Conv2d(120, num_classes, 3, padding=1)
+        self.cls_conv = nn.Conv2d(192, num_classes, 3, padding=1)
         initialize_weights(self.up_convs)
         initialize_weights(self.cls_conv)
 
     def forward(self, x):
-        x = imagenet_normalize(x)
         x = self.stages[0](x)
         x1 = x
         x = self.stages[1](x)
@@ -97,7 +97,7 @@ class UNet(nn.Module):
 
 if __name__ == "__main__":
     a = torch.ones([2, 3, 224, 224])
-    model = DeepLabV3Plus(30)
+    model = UNet(30)
     o = model(a)
     model.train()
     print(o.shape)

@@ -79,8 +79,15 @@ VOC_COLORMAP = voc_colormap(32)
 
 
 class BasicDataset(torch.utils.data.Dataset):
-    def __init__(self):
+    def __init__(self, img_size, augments, multi_scale, rect):
         super(BasicDataset, self).__init__()
+        if isinstance(img_size, int):
+            img_size = (img_size, img_size)
+        assert len(img_size) == 2
+        self.img_size = img_size
+        self.rect = rect
+        self.multi_scale = multi_scale
+        self.augments = augments
         self.data = []
 
     def get_data(self, idx):
@@ -88,10 +95,18 @@ class BasicDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         img, seg = self.get_data(idx)
-        seg = SegmentationMapsOnImage(seg, shape=img.shape)
-        img = img[:, :, ::-1]
+        img = img[..., ::-1]
+        h, w, c = img.shape
 
-        resize = self.resize.to_deterministic()
+        if self.rect:
+            scale = min(self.img_size[0] / w, self.img_size[1] / h)
+            resize = ia.Sequential([
+                ia.Resize((int(w * scale), int(h * scale))),
+                ia.PadToFixedSize(*self.img_size)
+            ])
+        else:
+            resize = ia.Resize(self.img_size)
+
         img = resize.augment_image(img)
         seg = resize.augment_segmentation_maps(seg)
         # augment
@@ -103,8 +118,7 @@ class BasicDataset(torch.utils.data.Dataset):
         img = img.transpose(2, 0, 1)
         img = np.ascontiguousarray(img)
         seg = seg.get_arr()
-        # for ci, c in enumerate(self.classes):
-        #     seg[seg_args == ci, 1 if ci > 0 else 0] = 1
+
         return torch.ByteTensor(img), torch.ByteTensor(seg)
 
     def __len__(self):
@@ -121,8 +135,8 @@ class BasicDataset(torch.utils.data.Dataset):
             h = imgs.size(2)
             w = imgs.size(3)
             scale = random.uniform(0.7, 1.5)
-            h = int(h * scale / 16) * 16
-            w = int(w * scale / 16) * 16
+            h = int(h * scale / 32) * 32
+            w = int(w * scale / 32) * 32
             imgs = F.interpolate(imgs, (h, w))
         return (imgs, segs.long())
 
@@ -133,16 +147,13 @@ class SegImgDataset(BasicDataset):
                  img_size=224,
                  augments=TRAIN_AUGS,
                  multi_scale=False,
+                 rect=False,
                  colormap=VOC_COLORMAP):
-        super(SegImgDataset, self).__init__()
+        super(SegImgDataset, self).__init__(img_size=img_size,
+                                            augments=augments,
+                                            multi_scale=multi_scale,
+                                            rect=rect)
         self.path = path
-        if isinstance(img_size, int):
-            img_size = (img_size, img_size)
-        assert len(img_size) == 2
-        self.img_size = img_size
-        self.multi_scale = multi_scale
-        self.resize = ia.Resize({"height": img_size[1], "width": img_size[0]})
-        self.augments = augments
         self.classes = []
         self.build_data()
         self.data.sort()
@@ -170,6 +181,7 @@ class SegImgDataset(BasicDataset):
                        dtype=np.uint8)
         for ci, c in enumerate(self.colormap):
             seg[(seg_color == c).all(2)] = ci
+        seg = SegmentationMapsOnImage(seg, shape=img.shape)
         return img, seg
 
 
@@ -178,17 +190,15 @@ class CocoDataset(BasicDataset):
                  path,
                  img_size=224,
                  augments=TRAIN_AUGS,
-                 multi_scale=False):
-        super(CocoDataset, self).__init__()
+                 multi_scale=False,
+                 rect=False):
+        super(CocoDataset, self).__init__(img_size=img_size,
+                                          augments=augments,
+                                          multi_scale=multi_scale,
+                                          rect=rect)
         with open(path, 'r') as f:
             self.coco = json.loads(f.read())
         self.img_root = osp.dirname(path)
-        if isinstance(img_size, int):
-            img_size = (img_size, img_size)
-        assert len(img_size) == 2
-        self.img_size = img_size
-        self.multi_scale = multi_scale
-        self.resize = ia.Resize({"height": img_size[1], "width": img_size[0]})
         self.augments = augments
         self.classes = []
         self.build_data()
@@ -217,4 +227,5 @@ class CocoDataset(BasicDataset):
         for ann in anns:
             points = np.int64(ann['segmentation']).reshape(-1, 2)
             seg = cv2.fillPoly(seg, [points], ann['category_id'] + 1, 0)
+        seg = SegmentationMapsOnImage(seg, shape=img.shape)
         return img, seg
