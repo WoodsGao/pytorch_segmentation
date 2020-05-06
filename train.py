@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, DistributedSampler
 
 from pytorch_modules.utils import Fetcher, Trainer
 from utils.datasets import CocoDataset
-from utils.models import DeepLabV3Plus
+from models import DeepLabV3Plus
 from utils.utils import compute_loss
 
 
@@ -30,7 +30,6 @@ def train(data_dir,
           mixed_precision=False,
           notest=False,
           nosave=False):
-    os.makedirs('weights', exist_ok=True)
     train_coco = osp.join(data_dir, 'train.json')
     val_coco = osp.join(data_dir, 'val.json')
 
@@ -71,6 +70,7 @@ def train(data_dir,
     trainer = Trainer(model,
                       train_fetcher,
                       loss_fn=compute_loss,
+                      workdir='weights',
                       accumulate=accumulate,
                       adam=adam,
                       lr=lr,
@@ -79,19 +79,14 @@ def train(data_dir,
                       mixed_precision=mixed_precision)
     while trainer.epoch < epochs:
         trainer.step()
-        save_path_list = ['last.pt']
-        if trainer.epoch % 10 == 0:
-            save_path_list.append('bak%d.pt' % trainer.epoch)
         if not notest:
-            metrics = test(trainer.model, val_fetcher)
+            best = False
+            metrics = test(trainer.model, val_fetcher, conf_thres=0.1)
             if metrics > trainer.metrics:
+                best = True
                 trainer.metrics = metrics
-                save_path_list.append('best.pt')
-                print('save best, metrics: %g...' % metrics)
-        save_path_list = [osp.join('weights', p) for p in save_path_list]
-        if nosave:
-            continue
-        trainer.save(save_path_list)
+        if not nosave:
+            trainer.save(best)
 
 
 if __name__ == "__main__":

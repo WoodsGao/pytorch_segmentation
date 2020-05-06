@@ -2,7 +2,7 @@ import torch
 import torch.distributed as dist
 from torch.utils.data import DataLoader
 from pytorch_modules.utils import device, Fetcher
-from utils.models import DeepLabV3Plus
+from models import DeepLabV3Plus
 from utils.datasets import CocoDataset
 from utils.utils import compute_loss, show_batch, compute_metrics
 from tqdm import tqdm

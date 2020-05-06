@@ -6,7 +6,7 @@ from tqdm import tqdm
 import numpy as np
 import cv2
 import torch
-from utils.models import DeepLabV3Plus
+from models import DeepLabV3Plus
 from utils.inference import inference
 from utils.datasets import VOC_COLORMAP
 from pytorch_modules.utils import device, IMG_EXT

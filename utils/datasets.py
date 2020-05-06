@@ -13,29 +13,29 @@ from pytorch_modules.utils import IMG_EXT
 TRAIN_AUGS = ia.SomeOf(
     [0, 3],
     [
-        ia.WithColorspace(
-            to_colorspace='HSV',
-            from_colorspace='RGB',
-            children=ia.Sequential([
-                ia.WithChannels(
-                    0,
-                    ia.SomeOf([0, None],
-                              [ia.Add((-10, 10)),
-                               ia.Multiply((0.95, 1.05))],
-                              random_state=True)),
-                ia.WithChannels(
-                    1,
-                    ia.SomeOf([0, None],
-                              [ia.Add((-50, 50)),
-                               ia.Multiply((0.8, 1.2))],
-                              random_state=True)),
-                ia.WithChannels(
-                    2,
-                    ia.SomeOf([0, None],
-                              [ia.Add((-50, 50)),
-                               ia.Multiply((0.8, 1.2))],
-                              random_state=True)),
-            ])),
+        # ia.WithColorspace(
+        #     to_colorspace='HSV',
+        #     from_colorspace='RGB',
+        #     children=ia.Sequential([
+        #         ia.WithChannels(
+        #             0,
+        #             ia.SomeOf([0, None],
+        #                       [ia.Add((-10, 10)),
+        #                        ia.Multiply((0.95, 1.05))],
+        #                       random_state=True)),
+        #         ia.WithChannels(
+        #             1,
+        #             ia.SomeOf([0, None],
+        #                       [ia.Add((-50, 50)),
+        #                        ia.Multiply((0.8, 1.2))],
+        #                       random_state=True)),
+        #         ia.WithChannels(
+        #             2,
+        #             ia.SomeOf([0, None],
+        #                       [ia.Add((-50, 50)),
+        #                        ia.Multiply((0.8, 1.2))],
+        #                       random_state=True)),
+        #     ])),
         ia.Dropout([0.015, 0.1]),  # drop 5% or 20% of all pixels
         ia.Sharpen((0.0, 1.0)),  # sharpen the image
         ia.Affine(
@@ -44,14 +44,14 @@ TRAIN_AUGS = ia.SomeOf(
             rotate=(-15, 15),
             shear=(-0.1,
                    0.1)),  # rotate by -45 to 45 degrees (affects heatmaps)
-        ia.ElasticTransformation(
-            alpha=(0, 10),
-            sigma=(0, 10)),  # apply water effect (affects heatmaps)
-        ia.PiecewiseAffine(scale=(0, 0.03), nb_rows=(2, 6), nb_cols=(2, 6)),
+        # ia.ElasticTransformation(
+        #     alpha=(0, 10),
+        #     sigma=(0, 10)),  # apply water effect (affects heatmaps)
+        # ia.PiecewiseAffine(scale=(0, 0.03), nb_rows=(2, 6), nb_cols=(2, 6)),
         ia.GaussianBlur((0, 3)),
         ia.Fliplr(0.1),
         ia.Flipud(0.1),
-        ia.LinearContrast((0.5, 1)),
+        # ia.LinearContrast((0.5, 1)),
         ia.AdditiveGaussianNoise(loc=(0, 10), scale=(0, 10))
     ],
     random_state=True)

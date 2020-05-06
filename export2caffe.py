@@ -2,7 +2,7 @@ import argparse
 import os
 import os.path as osp
 import torch
-from utils.models import DeepLabV3Plus
+from models import DeepLabV3Plus
 from pytorch_modules.utils import fuse
 from pytorch2caffe import pytorch2caffe
 
