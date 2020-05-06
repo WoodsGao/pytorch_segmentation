@@ -16,11 +16,11 @@ class UNet(nn.Module):
             pretrained=True, replace_stride_with_dilation=[False, False,
                                                            True]).stages
         self.up_convs = nn.ModuleList([
-            ConvNormAct(512, 256),
             ConvNormAct(512, 128),
-            ConvNormAct(256, 128)
+            ConvNormAct(256, 64),
+            ConvNormAct(128, 64)
         ])
-        self.cls_conv = nn.Conv2d(192, num_classes, 3, padding=1)
+        self.cls_conv = nn.Conv2d(128, num_classes, 3, padding=1)
         initialize_weights(self.up_convs)
         initialize_weights(self.cls_conv)
 
