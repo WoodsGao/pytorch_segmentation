@@ -81,7 +81,7 @@ def train(data_dir,
         trainer.step()
         if not notest:
             best = False
-            metrics = test(trainer.model, val_fetcher, conf_thres=0.1)
+            metrics = test(trainer.model, val_fetcher)
             if metrics > trainer.metrics:
                 best = True
                 trainer.metrics = metrics
