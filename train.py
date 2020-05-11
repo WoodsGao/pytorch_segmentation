@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import argparse
 import os
 import os.path as osp
@@ -11,7 +12,7 @@ from torch.utils.data import DataLoader, DistributedSampler
 
 from pytorch_modules.utils import Fetcher, Trainer
 from utils.datasets import CocoDataset
-from models import DeepLabV3Plus
+from models import DeepLabV3Plus, UNet, HRNet
 from utils.utils import compute_loss
 
 
@@ -66,6 +67,7 @@ def train(data_dir,
         val_fetcher = Fetcher(val_loader, post_fetch_fn=val_data.post_fetch_fn)
 
     model = DeepLabV3Plus(len(train_data.classes))
+    # model = UNet(len(train_data.classes))
 
     trainer = Trainer(model,
                       train_fetcher,
@@ -84,6 +86,7 @@ def train(data_dir,
             metrics = test(trainer.model, val_fetcher)
             if metrics > trainer.metrics:
                 best = True
+                print('save best, miou: %g' % metrics)
                 trainer.metrics = metrics
         if not nosave:
             trainer.save(best)

@@ -5,6 +5,7 @@ import numpy as np
 import cv2
 from pytorch_modules.nn import FocalBCELoss
 from .datasets import VOC_COLORMAP
+from .criterions import RectLoss
 
 CE = nn.CrossEntropyLoss()
 BCE = nn.BCEWithLogitsLoss()
@@ -16,7 +17,9 @@ def compute_loss(outputs, targets, model):
                             mode='bilinear',
                             align_corners=True)
     loss = CE(outputs, targets)
-    return loss
+    # rect_loss = RectLoss(reduction='none')
+    # rloss = rect_loss(outputs)[:, 1].mean()
+    return loss # + rloss
 
 
 def show_batch(inputs, targets):
@@ -27,7 +30,8 @@ def show_batch(inputs, targets):
     imgs += torch.FloatTensor([123.675, 116.28,
                                103.53]).reshape(1, 3, 1, 1).to(imgs.device)
 
-    imgs = imgs.clamp(0, 255).permute(0, 2, 3, 1).byte().cpu().numpy()[..., ::-1]
+    imgs = imgs.clamp(0, 255).permute(0, 2, 3,
+                                      1).byte().cpu().numpy()[..., ::-1]
     imgs = np.ascontiguousarray(imgs)
     segs = segs.cpu().numpy()
     segs = np.ascontiguousarray(segs)
