@@ -2,13 +2,13 @@ import argparse
 import os
 import os.path as osp
 import torch
-from models import DeepLabV3Plus
+from models import DeepLabV3Plus, UNet
 from pytorch_modules.utils import fuse
 from pytorch2caffe import pytorch2caffe
 
 
 def export2caffe(weights, num_classes, img_size):
-    model = DeepLabV3Plus(num_classes)
+    model = UNet(num_classes)
     weights = torch.load(weights, map_location='cpu')
     model.load_state_dict(weights['model'])
     model.eval()

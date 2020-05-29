@@ -10,9 +10,9 @@ import torch.distributed as dist
 import torch.nn as nn
 from torch.utils.data import DataLoader, DistributedSampler
 
+from models import DeepLabV3Plus, HRNet, UNet
 from pytorch_modules.utils import Fetcher, Trainer
-from utils.datasets import CocoDataset
-from models import DeepLabV3Plus, UNet, HRNet
+from utils.datasets import CocoDataset, CocoInstance
 from utils.utils import compute_loss
 
 
@@ -34,10 +34,10 @@ def train(data_dir,
     train_coco = osp.join(data_dir, 'train.json')
     val_coco = osp.join(data_dir, 'val.json')
 
-    train_data = CocoDataset(train_coco,
-                             img_size=img_size,
-                             multi_scale=multi_scale,
-                             rect=rect)
+    train_data = CocoInstance(train_coco,
+                              img_size=img_size,
+                              multi_scale=multi_scale,
+                              rect=rect)
     train_loader = DataLoader(
         train_data,
         batch_size=batch_size,
@@ -50,10 +50,10 @@ def train(data_dir,
     )
     train_fetcher = Fetcher(train_loader, train_data.post_fetch_fn)
     if not notest:
-        val_data = CocoDataset(val_coco,
-                               img_size=img_size,
-                               augments=None,
-                               rect=rect)
+        val_data = CocoInstance(val_coco,
+                                img_size=img_size,
+                                augments=None,
+                                rect=rect)
         val_loader = DataLoader(
             val_data,
             batch_size=batch_size,
@@ -66,8 +66,9 @@ def train(data_dir,
         )
         val_fetcher = Fetcher(val_loader, post_fetch_fn=val_data.post_fetch_fn)
 
-    model = DeepLabV3Plus(len(train_data.classes))
-    # model = UNet(len(train_data.classes))
+    # model = HRNet(len(train_data.classes))
+    # model = DeepLabV3Plus(len(train_data.classes))
+    model = UNet(len(train_data.classes))
 
     trainer = Trainer(model,
                       train_fetcher,
@@ -94,7 +95,7 @@ def train(data_dir,
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', type=str, default='data/voc')
+    parser.add_argument('data', type=str)
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--img-size', type=str, default='416')
     parser.add_argument('-bs', '--batch-size', type=int, default=4)
@@ -106,7 +107,10 @@ if __name__ == "__main__":
     parser.add_argument('--num-workers', type=int, default=4)
     parser.add_argument('--multi-scale', action='store_true')
     parser.add_argument('--rect', action='store_true')
-    parser.add_argument('-mp', '--mix_precision', action='store_true', help='mixed precision')
+    parser.add_argument('-mp',
+                        '--mix_precision',
+                        action='store_true',
+                        help='mixed precision')
     parser.add_argument('--notest', action='store_true')
     parser.add_argument('--nosave', action='store_true')
     parser.add_argument('--backend', type=str, default='nccl')
