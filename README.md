@@ -37,23 +37,20 @@ You can use `split_coco_json.py` from [woodsgao/cv_utils](https://github.com/woo
 
 ### Training
 
-    python3 train.py --data data/<custom>
+    python3 train.py data/<custom>
 
 ### Distributed Training
 
-Run the following command in all nodes.Every node will save your weights
-    python3 train.py --data data/<custom>
-Or in distributed
-    python3 -m torch.distributed.launch --nproc_per_node=<nproc> train.py --data data/<custom>
+    python3 -m torch.distributed.launch --nproc_per_node=<nproc> train.py data/<custom>
 
 ### Testing
 
-    python3 test.py --val-list /data/<custom>/val.json
+    python3 test.py data/<custom>/val.json --weights weights.pth
 
 ### Inference
 
-    python3 inference.py --img-dir data/samples
+    python3 inference.py data/samples outputs --weights weights.pth
 
 ### Export to caffe model
 
-    python3 export2caffe.py weights/best.pt --num-classes 21 --img-size 512,512
+    python3 export2caffe.py weights/best.pt -nc 2 -s 320 320

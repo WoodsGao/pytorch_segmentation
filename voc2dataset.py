@@ -1,6 +1,7 @@
 import argparse
 import os
 import os.path as osp
+
 import find_color_map
 
 
@@ -30,6 +31,6 @@ def voc2dataset(data_dir):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('path', default='.VOCdevkit')
+    parser.add_argument('data_dir')
     args = parser.parse_args()
-    voc2dataset(args.path)
+    voc2dataset(args.data_dir)

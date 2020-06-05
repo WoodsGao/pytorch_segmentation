@@ -1,10 +1,12 @@
 import argparse
 import os
 import os.path as osp
+
 import torch
+
 from models import DeepLabV3Plus, UNet
-from pytorch_modules.utils import fuse
 from pytorch2caffe import pytorch2caffe
+from pytorch_modules.utils import fuse
 
 
 def export2caffe(weights, num_classes, img_size):
@@ -23,14 +25,12 @@ def export2caffe(weights, num_classes, img_size):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('weights', type=str)
-    parser.add_argument('--num-classes', type=int, default=21)
-    parser.add_argument('--img-size', type=str, default='512')
+    parser.add_argument('-s',
+                        '--img_size',
+                        type=int,
+                        nargs=2,
+                        default=[320, 320])
+    parser.add_argument('-nc', '--num-classes', type=int, default=2)
     opt = parser.parse_args()
 
-    img_size = opt.img_size.split(',')
-    assert len(img_size) in [1, 2]
-    if len(img_size) == 1:
-        img_size = [int(img_size[0])] * 2
-    else:
-        img_size = [int(x) for x in img_size]
-    export2caffe(opt.weights, opt.num_classes, img_size)
+    export2caffe(opt.weights, opt.num_classes, opt.img_size)

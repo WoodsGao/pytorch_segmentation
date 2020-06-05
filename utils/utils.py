@@ -1,11 +1,13 @@
+import cv2
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-import cv2
+
 from pytorch_modules.nn import FocalBCELoss
-from .datasets import VOC_COLORMAP
+
 from .criterions import RectLoss
+from .datasets import VOC_COLORMAP
 
 CE = nn.CrossEntropyLoss()
 BCE = nn.BCEWithLogitsLoss()
@@ -19,7 +21,7 @@ def compute_loss(outputs, targets, model):
     loss = CE(outputs, targets)
     # rect_loss = RectLoss(reduction='none')
     # rloss = rect_loss(outputs)[:, 1].mean()
-    return loss # + rloss
+    return loss  # + rloss
 
 
 def show_batch(inputs, targets):

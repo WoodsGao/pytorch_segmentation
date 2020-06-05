@@ -1,6 +1,7 @@
-import numpy as np
 import cv2
+import numpy as np
 import torch
+
 from pytorch_modules.utils import device
 
 

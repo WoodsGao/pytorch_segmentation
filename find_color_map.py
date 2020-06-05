@@ -1,9 +1,11 @@
+import argparse
 import os
 import os.path as osp
+
 import cv2
 import numpy as np
-import argparse
 from tqdm import tqdm
+
 from pytorch_modules.utils import IMG_EXT
 
 
@@ -26,6 +28,6 @@ def run(data_dir):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('path', default='./VOCdevkit')
+    parser.add_argument('data_dir')
     args = parser.parse_args()
-    run(args.path)
+    run(args.data_dir)
